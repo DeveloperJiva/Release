@@ -1,0 +1,4117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Talktojiva · Technical Architecture & Execution Walkthrough</title>
+  <!-- Mermaid.js for Live Architecture Diagram Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    if (typeof mermaid !== 'undefined') {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'neutral',
+        themeVariables: {
+          primaryColor: '#edf5ff',
+          primaryTextColor: '#1d1d1f',
+          primaryBorderColor: '#0071e3',
+          lineColor: '#0071e3',
+          secondaryColor: '#f9f0fc',
+          tertiaryColor: '#eefbf1',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+          fontSize: '12px'
+        }
+      });
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Theme & Surface Canvas */
+      --bg: #f2f4f7;
+      --surface: #ffffff;
+      --surface-secondary: #eef1f5;
+      --surface-tertiary: #e2e6eb;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.02);
+      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.06);
+
+      /* Brand Palette: Navy, Slate, Teal */
+      --brand-navy: #1e3a8a;
+      --brand-navy-bg: #eff6ff;
+      --brand-navy-border: #bfdbfe;
+
+      --brand-slate: #334155;
+      --brand-slate-bg: #f1f5f9;
+      --brand-slate-border: #cbd5e1;
+
+      --brand-teal: #0f766e;
+      --brand-teal-bg: #f0fdfa;
+      --brand-teal-border: #99f6e4;
+
+      /* Semantic aliases */
+      --apple-blue: #1e3a8a;
+      --apple-blue-bg: #eff6ff;
+      --apple-blue-border: rgba(30, 58, 138, 0.25);
+      
+      --apple-green: #0f766e;
+      --apple-green-bg: #f0fdfa;
+      --apple-green-border: rgba(15, 118, 110, 0.3);
+
+      --apple-orange: #334155;
+      --apple-orange-bg: #f1f5f9;
+      --apple-orange-border: rgba(51, 65, 85, 0.3);
+
+      --apple-purple: #475569;
+      --apple-purple-bg: #f8fafc;
+      --apple-purple-border: rgba(71, 85, 105, 0.25);
+
+      --apple-red: #991b1b;
+      --apple-red-bg: #fef2f2;
+
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-tertiary: #64748b;
+
+      --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-stack);
+      background-color: var(--bg);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(30, 58, 138, 0.03) 0%, transparent 60%),
+        radial-gradient(circle at 90% 100%, rgba(15, 118, 110, 0.02) 0%, transparent 50%);
+    }
+
+    /* Presentation Stage Styles */
+
+    .brand-pill {
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--apple-blue-bg);
+      color: var(--apple-blue);
+      
+      font-weight: 600;
+    }
+
+    /* Center Tabs: Sole Focus on Slide Navigation */
+    .slide-tabs {
+      display: flex;
+      background: var(--surface-secondary);
+      padding: 2px;
+      border-radius: 999px;
+      gap: 2px;
+    }
+
+    .slide-tab {
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .slide-tab.active {
+      background: #ffffff;
+      color: var(--apple-blue);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+
+
+
+    .btn {
+      background: #ffffff;
+      border: none;
+      color: var(--text-primary);
+      padding: 5px 11px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--surface-secondary);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+
+    .btn-icon {
+      padding: 5px 9px;
+    }
+
+    .speed-select {
+      background: #ffffff;
+      border: none;
+      color: var(--text-primary);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+
+    /* 3-Card Architecture Overview Metric Bar (Slide 1) */
+    .metric-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    /* Structured Codebase Fact Points (Replaces Raw Code Snippets on Slide 1) */
+    .tier-points-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .tier-point-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 16.5px;
+      color: #1e293b;
+      line-height: 1.55;
+    }
+
+    .tier-point-bullet {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #475569;
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Understated Apple Node Themes (Zero Flashy Colors) */
+    .svg-node.active-node-flutter rect {
+      stroke: #1e3a8a;
+      fill: #f8fafc;
+      filter: drop-shadow(0 4px 14px rgba(30, 58, 138, 0.12));
+    }
+
+    .svg-node.active-node-proxy rect {
+      stroke: #334155;
+      fill: #f8fafc;
+      filter: drop-shadow(0 4px 14px rgba(51, 65, 85, 0.12));
+    }
+
+    .svg-node.active-node-classifier rect {
+      stroke: #475569;
+      fill: #f8fafc;
+      filter: drop-shadow(0 4px 14px rgba(71, 85, 105, 0.12));
+    }
+
+    .svg-node.active-node-vertex rect,
+    .svg-node.active-node-llm rect {
+      stroke: #0f766e;
+      fill: #f8fafc;
+      filter: drop-shadow(0 4px 14px rgba(15, 118, 110, 0.12));
+    }
+
+    /* Deck Container */
+    .deck-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 40px;
+      padding: 22px 32px 12px;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.99) translateY(6px);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.35s;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1) translateY(0);
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .slide-title-group h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+    }
+
+    .slide-title-group p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .loop-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: var(--apple-green-bg);
+      color: var(--brand-teal);
+      letter-spacing: 0.02em;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #0f766e;
+      box-shadow: 0 0 6px var(--apple-green);
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    /* Query & Model Banner */
+    .apple-query-strip {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 11px 18px;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1.1fr;
+      gap: 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      align-items: center;
+    }
+
+    /* Slide 2 Specific Wider Query Strip for Clean Typing Wrap */
+    #slide-2 .apple-query-strip {
+      grid-template-columns: 2.3fr 1fr 1.1fr;
+      padding: 10px 18px;
+    }
+
+    .query-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .query-tag {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--apple-blue);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .query-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Multi-line clean wrapping typewriter container */
+    .query-text-wrap {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: normal;
+      line-height: 1.4;
+      min-height: 40px;
+      word-break: break-word;
+    }
+
+    .typewriter-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 13px;
+      background-color: var(--apple-blue);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--surface-secondary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+
+    /* 4-Card System Architecture Overview Metric Bar (Slide 1) */
+    .metric-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .metric-card-white {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 11px 15px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-tertiary);
+    }
+
+    .metric-val {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--card-color, var(--apple-blue));
+    }
+
+    .metric-sub {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    /* Main Full-Screen Visual Stage */
+    .flow-stage {
+      flex: 1;
+      background: var(--surface);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Slide 1 Split Stage */
+    .slide1-split {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .flow-left-stage {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+      padding: 14px 18px 10px;
+      gap: 10px;
+    }
+
+    .flow-status-bar {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      flex-shrink: 0;
+    }
+
+    .status-live-text {
+      font-size: 15.5px;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.35;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .status-transport-pill {
+      font-family: SFMono-Regular, Consolas, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 5px 11px;
+      border-radius: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .flow-svg-container {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tier-details-panel {
+      padding: 22px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+      background: #fafafc;
+      overflow-y: auto;
+    }
+
+    .tier-detail-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .code-box-white {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: SFMono-Regular, Consolas, Menlo, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* SVG Flowchart (Spacious Layout & Port Pins to Prevent Text Overlap) */
+    svg.flow-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .svg-node rect {
+      fill: #ffffff;
+      stroke: rgba(0, 0, 0, 0.05);
+      stroke-width: 1;
+      rx: 10;
+      transition: all 0.3s ease;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.04));
+    }
+
+    .svg-node.active-blue rect {
+      stroke: var(--apple-blue);
+      fill: var(--apple-blue-bg);
+      filter: drop-shadow(0 4px 14px rgba(0, 113, 227, 0.25));
+    }
+
+    .svg-node.active-green rect {
+      stroke: var(--apple-green);
+      fill: var(--apple-green-bg);
+      filter: drop-shadow(0 4px 14px rgba(52, 199, 89, 0.25));
+    }
+
+    .svg-node.active-purple rect {
+      stroke: var(--apple-purple);
+      fill: var(--apple-purple-bg);
+      filter: drop-shadow(0 4px 14px rgba(175, 82, 222, 0.25));
+    }
+
+    .svg-node.active-orange rect {
+      stroke: var(--apple-orange);
+      fill: var(--apple-orange-bg);
+      filter: drop-shadow(0 4px 14px rgba(255, 149, 0, 0.25));
+    }
+
+    .svg-node text.title {
+      font-size: 14.5px;
+      font-weight: 700;
+      fill: #1d1d1f;
+      font-family: var(--font-stack);
+    }
+
+    .svg-node text.sub {
+      font-size: 12px;
+      fill: #6e6e73;
+      font-family: var(--font-stack);
+      font-weight: 500;
+    }
+
+    .svg-link {
+      fill: none;
+      stroke: #cbd5e1;
+      stroke-width: 2;
+      stroke-dasharray: 4 4;
+      transition: stroke 0.3s ease, stroke-width 0.3s ease;
+    }
+
+    .svg-link.active-path {
+      stroke: #1e3a8a;
+      stroke-width: 2.5;
+      stroke-dasharray: 6 6;
+      animation: dashflow 1s linear infinite;
+    }
+
+    @keyframes dashflow {
+      from { stroke-dashoffset: 24; }
+      to { stroke-dashoffset: 0; }
+    }
+
+        /* Slide 2: View Switcher & Refined Apple Flowchart Styles */
+    .s2-view-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 3px;
+      border-radius: 9px;
+      gap: 2px;
+    }
+
+    .s2-tab-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .s2-tab-btn:hover {
+      color: #0f172a;
+    }
+
+    .s2-tab-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .s2-flowchart-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      min-height: 270px;
+    }
+
+    .s2-node {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .s2-node rect {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .s2-node:hover rect:first-child {
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
+    }
+
+    .s2-node-active rect:first-child {
+      fill: #f8fafc !important;
+      stroke: #1e3a8a !important;
+      stroke-width: 2px !important;
+      filter: drop-shadow(0 4px 12px rgba(30, 58, 138, 0.14));
+    }
+
+    .s2-node-complete rect:first-child {
+      fill: #f8fafc !important;
+      stroke: #0f766e !important;
+      stroke-width: 2px !important;
+      filter: drop-shadow(0 4px 12px rgba(15, 118, 110, 0.14));
+    }
+
+    .s2-link {
+      transition: all 0.3s ease;
+    }
+
+    .s2-link-active {
+      stroke: #1e3a8a !important;
+      stroke-width: 2.5px !important;
+      stroke-dasharray: 6 6;
+      animation: dashflow 1s linear infinite;
+    }
+
+    .s2-link-complete {
+      stroke: #0f766e !important;
+      stroke-width: 2.5px !important;
+      stroke-dasharray: 6 6;
+      animation: dashflow 1s linear infinite;
+    }
+
+    .s2-loop-active {
+      stroke: #1e3a8a !important;
+      stroke-width: 2.5px !important;
+      stroke-dasharray: 6 6;
+      animation: dashflow 1s linear infinite;
+    }
+
+    .s2-loop-pill-active rect {
+      fill: #eff6ff !important;
+      stroke: #1e3a8a !important;
+      stroke-width: 1.5px !important;
+    }
+
+    .s2-loop-pill-active text {
+      fill: #1e3a8a !important;
+      font-weight: 700 !important;
+    }
+
+    /* Refined Agent Tool Breakdown Hub */
+    .mrkl-execution-hub {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 10px 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .mrkl-hub-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 6px;
+    }
+
+    .mrkl-breakdown-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.15fr;
+      gap: 12px;
+    }
+
+    .mrkl-cell {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      border: 1px solid #edf2f7;
+    }
+
+    .mrkl-cell-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mrkl-cell-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #0071e3;
+    }
+
+    .mrkl-cell-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #475569;
+      text-transform: uppercase;
+    }
+
+    .mrkl-cell-body {
+      font-size: 12px;
+      color: #1e293b;
+      line-height: 1.45;
+    }
+
+    /* Slide 2: 3-Phase Interactive Flow */
+    .slide2-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 18px 8px;
+      gap: 10px;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .phases-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .phase-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.3s ease;
+      border: 1.5px solid transparent;
+    }
+
+    .phase-card.active-phase {
+      background: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06), 0 0 0 1.5px var(--phase-color, var(--apple-blue));
+      border-color: var(--phase-color, var(--apple-blue));
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .phase-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--phase-color, var(--text-primary));
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .phase-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+    }
+
+    .phase-desc {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    /* Slide 2 Dual Workspace: Document Context (Left) + Grounded Chat Output (Right) */
+    .slide2-workspace {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 12px;
+    }
+
+    .doc-preview-panel,
+    .grounded-chat-panel {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      min-height: 0;
+    }
+
+    .doc-preview-header,
+    .grounded-chat-header {
+      padding: 9px 14px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .doc-file-info {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .doc-page-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .doc-preview-body {
+      flex: 1;
+      padding: 12px 16px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .doc-heading {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 4px;
+    }
+
+    .doc-paragraph {
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: #334155;
+      margin: 0;
+    }
+
+    .doc-highlight-box {
+      border-left: 3px solid #f59e0b;
+      background: #fffbeb;
+      color: #92400e;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      transition: all 0.3s ease;
+    }
+
+    .doc-diagram-box {
+      border: 1px dashed #cbd5e1;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .doc-diagram-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .doc-preview-footer {
+      padding: 7px 14px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    .grounded-chat-body {
+      flex: 1;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .chat-bubble-user {
+      align-self: flex-end;
+      background: #0071e3;
+      color: #ffffff;
+      padding: 8px 12px;
+      border-radius: 12px 12px 2px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+
+    .chat-bubble-model {
+      align-self: flex-start;
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 10px 14px;
+      border-radius: 12px 12px 12px 2px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      max-width: 98%;
+      border: 1px solid #e2e8f0;
+    }
+
+    .citation-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--brand-teal-bg);
+      color: var(--brand-teal);
+      font-family: SFMono-Regular, Consolas, monospace;
+      font-size: 11.5px;
+      font-weight: 700;
+      margin: 0 2px;
+      border: 1px solid rgba(15, 118, 110, 0.2);
+      vertical-align: baseline;
+    }
+
+    .citation-tag.active {
+      background: var(--brand-teal);
+      color: #ffffff;
+      border-color: var(--brand-teal);
+      box-shadow: 0 0 6px rgba(15, 118, 110, 0.3);
+    }
+
+    .grounded-citations-tray {
+      padding: 7px 14px;
+      background: #fafafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .citations-tray-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+    }
+
+    .citations-tray-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .citation-chip-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      font-size: 11.5px;
+      color: #334155;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    /* Slide 3: Full-Screen Presentation Flow (Fills Canvas with Zero Wasted Space) */
+    .slide3-pipeline {
+      flex: 1;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px 20px;
+      gap: 12px;
+    }
+
+    /* Active Tool Execution Hub Card */
+    .tool-execution-hub {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      flex-shrink: 0;
+    }
+
+    .hub-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hub-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: SFMono-Regular, Consolas, monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-nav { background: var(--brand-navy-bg); color: var(--brand-navy); }
+    .badge-tts { background: var(--apple-green-bg); color: var(--brand-teal); }
+    .badge-fetch { background: var(--brand-slate-bg); color: var(--brand-slate); }
+
+    .hub-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hub-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .hub-code {
+      font-family: SFMono-Regular, Consolas, Menlo, monospace;
+      font-size: 13.5px;
+      color: #333336;
+    }
+
+    /* Pipelined Parallel Tracks (Flex-Grows to Eliminate Empty White Space) */
+    .tracks-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: stretch;
+    }
+
+    .track-row {
+      flex: 1;
+      min-height: 78px;
+      background: var(--surface-secondary);
+      border-radius: 12px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      border: 1px solid var(--border);
+    }
+
+    .track-meta {
+      width: 180px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .track-title {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .track-sub {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-family: SFMono-Regular, Consolas, monospace;
+      font-weight: 600;
+    }
+
+    .track-nodes {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .node-item {
+      flex: 1;
+      height: 100%;
+      min-height: 64px;
+      padding: 8px 6px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .node-pnum {
+      font-size: 15px;
+      font-weight: 700;
+      color: inherit;
+      line-height: 1.2;
+    }
+
+    .node-topic {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .node-item.node-active-blue .node-topic {
+      color: #1e3a8a;
+      font-weight: 700;
+    }
+
+    .node-item.node-active-green .node-topic {
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    .node-item.node-prefetch-orange .node-topic {
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .node-item.node-active-blue {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1e3a8a;
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(30, 58, 138, 0.12);
+    }
+
+    .node-item.node-active-green {
+      background: #f0fdfa;
+      border-color: #99f6e4;
+      color: #0f766e;
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.12);
+    }
+
+    .node-item.node-prefetch-orange {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #334155;
+      animation: pulse-slate 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-slate {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(51, 65, 85, 0.25); }
+      50% { box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.6); }
+    }
+
+    /* Spoken Speech Playback Card */
+    .speech-playback-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      border: 1px solid #e2e8f0;
+    }
+
+    .apple-soundwave {
+      display: flex;
+      align-items: center;
+      gap: 3.5px;
+      height: 22px;
+    }
+
+    .soundwave-bar {
+      width: 3.5px;
+      background: var(--apple-green);
+      border-radius: 2px;
+      animation: soundwave 1s infinite ease-in-out;
+    }
+
+    .soundwave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .soundwave-bar:nth-child(3) { animation-delay: 0.4s; }
+    .soundwave-bar:nth-child(4) { animation-delay: 0.15s; }
+    .soundwave-bar:nth-child(5) { animation-delay: 0.35s; }
+
+    @keyframes soundwave {
+      0%, 100% { height: 5px; }
+      50% { height: 22px; }
+    }
+
+    .speech-text {
+      font-size: 18px;
+      font-weight: 500;
+      color: #0f172a;
+      line-height: 1.5;
+      flex: 1;
+      font-style: normal;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Sub-bar for step narration */
+    .flow-caption {
+      padding: 12px 22px;
+      background: var(--surface-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .caption-highlight {
+      color: var(--text-primary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Modal Dialog */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-sheet {
+      width: 90vw;
+      max-width: 1200px;
+      height: 85vh;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(20px) scale(0.98);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .modal-sheet {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fbfbfd;
+    }
+
+    .modal-title-group h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .modal-title-group p {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .modal-tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--surface-secondary);
+      padding: 3px;
+      border-radius: 8px;
+    }
+
+    .modal-tab-btn {
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+    }
+
+    .modal-tab-btn.active {
+      background: #ffffff;
+      color: var(--apple-blue);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #fafafc;
+    }
+
+    /* Minimal Bottom Footer */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: rgba(242, 244, 247, 0.94); border-top: 1px solid #e2e8f0;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      font-size: 12.5px;
+      color: var(--text-tertiary);
+      z-index: 100;
+    }
+
+    .kbd {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--surface-secondary);
+      font-family: SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+      color: var(--text-primary);
+    }
+
+    
+    /* =========================================================================
+       RESPONSIVE & MOBILE-FIRST SYSTEM (PHONES 360-430px, TABLETS, DESKTOP)
+       ========================================================================= */
+
+    /* Touch & Typography Base Upgrades */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .swipe-hint {
+      display: none;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-align: center;
+      padding: 4px 8px;
+      background: var(--surface-secondary);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .svg-scroll-container {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+    }
+
+    .tracks-scroll-container {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      padding-bottom: 4px;
+    }
+
+    /* Desktop View (Default >= 901px) */
+    @media (min-width: 901px) {
+      .tab-label-short { display: none !important; }
+      .tab-label-full { display: inline !important; }
+      .s2-horizontal-svg-container { display: block !important; }
+      .s2-vertical-svg-container { display: none !important; }
+    }
+
+    /* Tablet & Mobile Breakpoint (<= 900px) */
+    @media (max-width: 900px) {
+      body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+      }
+
+      .deck-container {
+        position: relative !important;
+        width: 100vw !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: calc(100dvh - 60px) !important;
+        overflow: visible !important;
+        padding: 12px 12px 76px 12px !important;
+      }
+
+      .slide {
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        display: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
+        gap: 14px !important;
+      }
+
+      .slide.active {
+        display: flex !important;
+        flex-direction: column !important;
+      }
+
+      /* Slide Header Stacking */
+      .slide-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+      }
+
+      .slide-title-group h1 {
+        font-size: clamp(20px, 4.5vw, 26px) !important;
+      }
+
+      .slide-title-group p {
+        font-size: clamp(13px, 3.2vw, 14.5px) !important;
+      }
+
+      /* 3-Card Metrics Bar -> 1 Column */
+      .metric-grid-3 {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      .metric-card-white {
+        padding: 12px 14px !important;
+      }
+
+      .metric-val {
+        font-size: clamp(18px, 4.2vw, 22px) !important;
+      }
+
+      /* Slide 1 Split: Stack Flowchart first, Details second */
+      .slide1-split {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 14px !important;
+      }
+
+      .flow-left-stage {
+        width: 100% !important;
+        min-height: 0 !important;
+      }
+
+      .flow-status-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+      }
+
+      .status-live-text {
+        font-size: 13px !important;
+      }
+
+      .status-transport-pill {
+        font-size: 11px !important;
+      }
+
+      .tier-details-panel {
+        width: 100% !important;
+      }
+
+      .tier-detail-card {
+        padding: 14px !important;
+      }
+
+      .tier-detail-card span[style*="font-size: 21px"] {
+        font-size: clamp(17px, 4vw, 20px) !important;
+      }
+
+      .tier-detail-card p {
+        font-size: clamp(13.5px, 3.2vw, 15px) !important;
+      }
+
+      .tier-point-item {
+        font-size: clamp(13px, 3vw, 14.5px) !important;
+      }
+
+      /* Query Strip: Stack into vertical column */
+      .apple-query-strip,
+      #slide-2 .apple-query-strip {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+        padding: 12px 14px !important;
+      }
+
+      .query-text {
+        font-size: 13px !important;
+        word-break: break-word !important;
+      }
+
+      /* Slide 2: Phases row & workspace stacking */
+      .phases-row {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      .phase-card {
+        padding: 12px 14px !important;
+      }
+
+      .slide2-workspace {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        flex: none !important;
+      }
+
+      .doc-preview-panel,
+      .grounded-chat-panel {
+        height: auto !important;
+        max-height: 380px !important;
+        overflow-y: auto !important;
+        border-radius: 12px !important;
+      }
+
+      .mrkl-execution-hub,
+      .tool-execution-hub {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        height: auto !important;
+        padding: 12px 14px !important;
+        gap: 8px !important;
+      }
+
+      .mrkl-execution-hub > div,
+      .tool-execution-hub .hub-left {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+      }
+
+      #s2-hub-title,
+      #s3-hub-title,
+      #s3-hub-code {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        word-break: break-word !important;
+        font-size: 13px !important;
+      }
+
+      /* Slide 3: Tracks & Speech Card */
+      .slide3-pipeline {
+        gap: 10px !important;
+      }
+
+      .tracks-wrapper {
+        min-width: 620px !important;
+      }
+
+      .track-row {
+        min-height: 72px !important;
+      }
+
+      .speech-playback-card {
+        padding: 12px 14px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+      }
+
+      .speech-text {
+        font-size: clamp(14px, 3.8vw, 16.5px) !important;
+        min-height: auto !important;
+      }
+
+      .flow-caption {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        padding: 10px 14px !important;
+      }
+
+      .flow-caption .caption-highlight {
+        flex-wrap: wrap !important;
+        font-size: 12.5px !important;
+      }
+
+      /* Bottom Navigation Bar (Sticky with safe-area support) */
+      .bottom-bar {
+        height: auto !important;
+        min-height: 52px !important;
+        padding: 6px 10px !important;
+        padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+      }
+
+      .bottom-kbd-hints {
+        display: none !important;
+      }
+
+      .slide-tabs {
+        flex: 1 !important;
+        justify-content: space-around !important;
+      }
+
+      .slide-tab {
+        min-height: 44px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+      }
+
+      .speed-select,
+      .btn {
+        min-height: 44px !important;
+        padding: 8px 12px !important;
+      }
+    }
+
+    /* Small Phone Breakpoint (<= 600px - Primary Portrait Phones 360-430px) */
+    @media (max-width: 600px) {
+      .deck-container {
+        padding: 8px 8px 74px 8px !important;
+      }
+
+      .swipe-hint {
+        display: block !important;
+      }
+
+      /* Compact Tab Labels on Narrow Screens */
+      .tab-label-full { display: none !important; }
+      .tab-label-short { display: inline !important; }
+
+      /* Flowchart & Studio Switcher: 44px touch targets */
+      .view-mode-tabs {
+        width: 100% !important;
+        display: flex !important;
+      }
+
+      .view-mode-tabs .tab-btn {
+        flex: 1 !important;
+        min-height: 44px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+
+      /* Slide 1 SVG: Scrollable with hint */
+      .flow-svg-container .flow-svg {
+        min-width: 600px !important;
+        width: 600px !important;
+        height: auto !important;
+      }
+
+      /* Slide 2: Hide horizontal SVG, display vertical stacked SVG */
+      .s2-horizontal-svg-container {
+        display: none !important;
+      }
+
+      .s2-vertical-svg-container {
+        display: block !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        border-radius: 12px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 10px 4px !important;
+      }
+
+      .s2-vertical-flow-svg {
+        width: 100% !important;
+        max-width: 360px !important;
+        height: auto !important;
+        margin: 0 auto !important;
+        display: block !important;
+      }
+
+      /* Hide secondary bottom buttons on narrow phones to avoid crowding */
+      .btn-secondary-hide {
+        display: none !important;
+      }
+
+      /* Fullscreen Sheets for Modals */
+      .modal-sheet {
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-width: 100vw !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+
+      .modal-header {
+        padding: 12px 14px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+      }
+
+      .modal-header-actions {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+      }
+
+      .modal-tab-btn {
+        min-height: 44px !important;
+        padding: 6px 10px !important;
+      }
+
+      .modal-body {
+        padding: 12px !important;
+      }
+
+      .modal-body pre {
+        max-height: none !important;
+        height: auto !important;
+        font-size: 11.5px !important;
+        white-space: pre !important;
+        overflow-x: auto !important;
+      }
+    }
+
+    
+    /* Strict Containment & Zero-Overflow Engine */
+    html, body {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+      }
+
+      .deck-container {
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+      }
+
+      .slide {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .flow-stage,
+      .slide1-split,
+      .slide2-container,
+      .slide2-workspace,
+      .slide3-pipeline {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .flow-left-stage {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Flow SVG Scrollable Container: Never expand parent width! */
+      .flow-svg-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+        box-sizing: border-box !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 6px !important;
+      }
+
+      .tracks-scroll-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        box-sizing: border-box !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 8px 6px !important;
+      }
+
+      .tracks-wrapper {
+        min-width: 580px !important;
+        width: 580px !important;
+      }
+
+      .metric-card-white,
+      .apple-query-strip,
+      .tier-detail-card,
+      .tool-execution-hub,
+      .mrkl-execution-hub,
+      .speech-playback-card,
+      .flow-caption {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .metric-val {
+        font-size: clamp(16px, 4.2vw, 20px) !important;
+        word-break: break-word !important;
+      }
+
+      .metric-sub {
+        font-size: 12px !important;
+        line-height: 1.4 !important;
+        word-break: break-word !important;
+      }
+
+      .slide-title-group h1 {
+        font-size: clamp(18px, 4.5vw, 24px) !important;
+        line-height: 1.25 !important;
+        word-break: break-word !important;
+      }
+
+      .slide-title-group p {
+        font-size: clamp(12.5px, 3.2vw, 14px) !important;
+        line-height: 1.4 !important;
+        word-break: break-word !important;
+      }
+
+      /* Bottom Bar */
+      .bottom-bar {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+        padding: 4px 8px !important;
+        padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+        gap: 6px !important;
+      }
+
+      .slide-tabs {
+        gap: 2px !important;
+        padding: 2px !important;
+      }
+
+      .slide-tab {
+        padding: 6px 10px !important;
+        font-size: 11.5px !important;
+      }
+
+      .speed-select {
+        font-size: 11.5px !important;
+        padding: 6px 8px !important;
+        max-width: 78px !important;
+      }
+
+      .btn {
+        padding: 6px 10px !important;
+        font-size: 11.5px !important;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .slide-tab {
+        padding: 6px 6px !important;
+        font-size: 10.5px !important;
+      }
+      .bottom-bar {
+        padding: 3px 4px !important;
+        gap: 3px !important;
+      }
+    }
+
+    /* Print Styles */
+    @media print {
+      body { overflow: visible; height: auto; background: #ffffff !important; }
+      .top-bar, .bottom-bar, .modal-overlay { display: none !important; }
+      .deck-container { padding: 0; height: auto; }
+      .slide {
+        position: relative !important;
+        top: 0 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
+        page-break-after: always;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        height: 100vh;
+        padding: 24px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  
+
+  <!-- Deck Container -->
+  <main class="deck-container">
+
+    <!-- ==========================================
+         SLIDE 1: JIVA COMMUNICATION ARCHITECTURE (CLOSED-LOOP ENGINE)
+         ========================================== -->
+    <section class="slide active" id="slide-1">
+      <div class="slide-header">
+        <div class="slide-title-group">
+          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); margin: 0;">
+            Talktojiva Communication Architecture
+          </h1>
+          <p style="font-size: 14.5px; color: var(--text-secondary); margin-top: 4px; font-weight: 500;">
+            Document privacy by design: Full PDF stays in the device sandbox; only passages requested by the model are transmitted.
+          </p>
+        </div>
+      </div>
+
+      <!-- Architecture Core Metrics Strip -->
+      <div class="metric-grid-3">
+        <div class="metric-card-white" style="--card-color: #1e3a8a;">
+          <span class="metric-label">Document Privacy</span>
+          <span class="metric-val">Local-First Storage</span>
+          <span class="metric-sub">Full document stays on device; only model-requested passages sent</span>
+        </div>
+
+        <div class="metric-card-white" style="--card-color: #334155;">
+          <span class="metric-label">Pre-Routing</span>
+          <span class="metric-val">~12–15 ms Intent Routing</span>
+          <span class="metric-sub">FastAPI PyTorch microservice classifies query before LLM call</span>
+        </div>
+
+        <div class="metric-card-white" style="--card-color: #0f766e;">
+          <span class="metric-label">Observability</span>
+          <span class="metric-val">Arize Phoenix Tracing</span>
+          <span class="metric-sub">Live OpenInference OpenTelemetry span monitoring across gateway</span>
+        </div>
+      </div>
+
+      <!-- Flow Stage: Complete Application Loop (Left) + Codebase Fact Points Inspector (Right) -->
+      <div class="flow-stage">
+        <div class="slide1-split">
+          
+          <!-- Left: Live Activity Bar (Without Step Numbering) + Clean Flowchart SVG -->
+          <div class="flow-left-stage">
+            
+            <!-- Live Activity Bar (Clear text showing what system is doing, no "Step X/6" badge) -->
+            <div class="flow-status-bar">
+              <span id="s1-status-text" class="status-live-text">User enters query · Document stays in local sandbox; only model-requested passages route via Gateway</span>
+              <span id="s1-transport" class="status-transport-pill">wss://gateway.talktojiva.com/ws (TLS)</span>
+            </div>
+
+            <!-- Flowchart SVG Container -->
+            <div class="flow-svg-container">
+              <div class="swipe-hint">⇄ Swipe horizontally to pan architecture map</div>
+              <svg class="flow-svg" viewBox="0 0 680 320">
+                <!-- Connecting Channels: All communications strictly route through the central Node.js Gateway -->
+                <!-- Channel 1: Flutter <-> Node.js Gateway -->
+                <path id="link-flutter-proxy" class="svg-link active-path" d="M 205 102 L 265 102" />
+                <text x="235" y="92" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">WebSocket</text>
+
+                <!-- Channel 2: Node.js Gateway <-> Intent Classifier -->
+                <path id="link-proxy-classifier" class="svg-link" d="M 435 102 L 495 102" />
+                <text x="465" y="92" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">&lt; 15ms</text>
+
+                <!-- Channel 3: Node.js Gateway <-> Vertex AI -->
+                <path id="link-proxy-vertex" class="svg-link" d="M 350 139 L 350 195" />
+                <text x="362" y="171" text-anchor="start" font-size="11" font-weight="600" fill="#64748b">Vertex API</text>
+
+                <!-- NODE 1: Flutter App (Mobile Client & On-Device Tool Engine) -->
+                <g id="node-flutter" class="svg-node" transform="translate(35, 65)">
+                  <rect width="170" height="74" rx="12" />
+                  <text class="title" x="85" y="32" text-anchor="middle">Flutter App</text>
+                  <text class="sub" x="85" y="52" text-anchor="middle">Local Storage · pdfrx</text>
+                </g>
+
+                <!-- NODE 2: Node.js Gateway Proxy (Central Hub For All Tools & Comms) -->
+                <g id="node-proxy" class="svg-node" transform="translate(265, 65)">
+                  <rect width="170" height="74" rx="12" />
+                  <text class="title" x="85" y="32" text-anchor="middle">Node.js Gateway</text>
+                  <text class="sub" x="85" y="52" text-anchor="middle">Gateway &amp; Tracing Hub</text>
+                </g>
+
+                <!-- NODE 3: ML Intent Classifier (Internal Microservice Checked via Proxy) -->
+                <g id="node-classifier" class="svg-node" transform="translate(495, 65)">
+                  <rect width="155" height="74" rx="12" />
+                  <text class="title" x="77.5" y="32" text-anchor="middle">Intent Classifier</text>
+                  <text class="sub" x="77.5" y="52" text-anchor="middle">&lt; 15ms Pre-Routing</text>
+                </g>
+
+                <!-- NODE 4: Vertex AI (Gemini 1.5 Flash Reasoning & Tools) -->
+                <g id="node-vertex" class="svg-node" transform="translate(255, 195)">
+                  <rect width="190" height="74" rx="12" />
+                  <text class="title" x="95" y="32" text-anchor="middle">Vertex AI</text>
+                  <text class="sub" x="95" y="52" text-anchor="middle">Gemini 1.5 Flash</text>
+                </g>
+
+                <!-- Central Proxy Routing Note -->
+                <text x="340" y="298" text-anchor="middle" font-size="12" font-weight="600" fill="#64748b">
+                  All tool execution and model communication strictly routes through Node.js Gateway
+                </text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Right: Codebase Facts & Architecture Details (Structured Bullet Points, Scaled Font Size) -->
+          <div class="tier-details-panel">
+            <div class="tier-detail-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 21px; font-weight: 700; color: #0f172a; letter-spacing: -0.015em;" id="s1-detail-title">
+                  Flutter Mobile App (Edge Client)
+                </span>
+                <span class="brand-pill" id="s1-detail-pill" style="font-size: 13px; font-weight: 700; padding: 5px 12px;">On-Device Execution</span>
+              </div>
+              <p style="font-size: 16.5px; color: #334155; line-height: 1.55; margin-bottom: 2px;" id="s1-detail-desc">
+                Cross-platform mobile application holding the complete document locally in the app sandbox.
+              </p>
+
+              <!-- Concrete Codebase Points List -->
+              <div class="tier-points-list" id="s1-detail-points">
+                <!-- Dynamically rendered via JavaScript -->
+              </div>
+            </div>
+
+            <!-- Arize Phoenix Live Query Management Callout -->
+            <div style="background: #f8fafc; padding: 16px 18px; border-radius: 12px; font-size: 16px; color: #334155; line-height: 1.55;">
+              <strong style="color: #0f172a; font-size: 16px;">Live Production Reliability:</strong>
+              <span id="s1-moat-text">
+                Arize Phoenix OpenTelemetry tracing inspects all turns across Gateway and model, catching and isolating errors without breaking user sessions.
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 2: HOW CHAT WORKS (CLEAN TYPING WRAP @ 35MS/CHAR)
+         ========================================== -->
+    <section class="slide" id="slide-2">
+      <div class="slide-header">
+        <div class="slide-title-group">
+          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); margin: 0;">
+            Agent Tool-Calling Loop: Two-Pass Search &amp; Verification
+          </h1>
+          <p style="font-size: 14.5px; color: var(--text-secondary); margin-top: 4px; font-weight: 500;">
+            Targeted retrieval: Fetches exact passages rather than consuming 250k+ tokens loading full books into context.
+          </p>
+        </div>
+        <div class="s2-view-switcher">
+          <button class="s2-tab-btn active" id="s2-tab-flowchart" onclick="switchSlide2Tab('flowchart')">
+            Flowchart View
+          </button>
+          <button class="s2-tab-btn" id="s2-tab-studio" onclick="switchSlide2Tab('studio')">
+            Evidence &amp; Chat Studio
+          </button>
+        </div>
+      </div>
+
+      <!-- Prominent Apple Query, Model & Strategy Banner (Clean Multi-Line Wrap) -->
+      <div class="apple-query-strip">
+        <div class="query-item">
+          <span class="query-tag">User Query (Live Stream @ 18ms/char)</span>
+          <div class="query-text-wrap" id="s2-typewriter-query" title="I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline when users put in queries and what are things to be careful about? Just give me an overview of the most critical thing the author mentions in this book.">
+            <span id="s2-query-stream"></span><span class="typewriter-cursor"></span>
+          </div>
+        </div>
+        <div class="query-item">
+          <span class="query-tag" style="color: var(--apple-green);">Model Responded</span>
+          <div class="model-badge">
+            <span style="color: var(--apple-green);">●</span> Google Gemini 1.5 Flash (Vertex AI)
+          </div>
+        </div>
+        <div class="query-item">
+          <span class="query-tag" style="color: var(--brand-slate);">Strategy &amp; Tools</span>
+          <span class="query-text" style="font-family: SFMono-Regular, Consolas, monospace; color: var(--brand-slate);">
+            getPageContent ➔ searchPdfContent ➔ Synthesis
+          </span>
+        </div>
+      </div>
+
+      <!-- Flow Stage Canvas: 3 Phase Cards + Live Terminal -->
+      <div class="flow-stage">
+        <div class="slide2-container">
+          <!-- ==============================================
+               VIEW 1: CLEAN FLOWCHART VIEW (DEFAULT)
+               Explains loop without text overload: Query ➔ Loop (Reasoning ➔ Searching ➔ Referencing) ➔ Response
+               ============================================== -->
+          <div id="s2-view-flowchart" style="flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+            
+            <!-- Clean Apple Vector Flowchart (Uncluttered, High Contrast) -->
+            <div class="s2-flowchart-card">
+              <svg viewBox="0 0 1080 280" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display: block;">
+                <defs>
+                  <marker id="s2-arr-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1e3a8a" />
+                  </marker>
+                  <marker id="s2-arr-green" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0f766e" />
+                  </marker>
+                  <marker id="s2-arr-gray" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#94a3b8" />
+                  </marker>
+                </defs>
+
+                <!-- Boundary: Agent Tool-Calling Loop (Enclosing Nodes 2, 3, and 4 with generous margins) -->
+                <rect x="202" y="14" width="650" height="250" rx="16" fill="#fcfcfd" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="5 4" />
+                
+                <!-- Boundary Header Badge -->
+                <rect x="218" y="24" width="190" height="22" rx="6" fill="#f1f5f9" />
+                <text x="313" y="39" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" letter-spacing="0.04em">AGENT TOOL-CALLING LOOP</text>
+                <text x="836" y="39" text-anchor="end" font-size="11" font-weight="600" fill="#64748b">2-Pass Iterative Verification</text>
+
+                <!-- Connecting Path 1: User Query ➔ 1. Reasoning -->
+                <path id="s2-link-query-reason" class="s2-link" d="M 166 116 L 220 116" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray)" />
+
+                <!-- Connecting Path 2: 1. Reasoning ➔ 2. Searching -->
+                <path id="s2-link-reason-search" class="s2-link" d="M 388 116 L 434 116" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray)" />
+                <text x="411" y="107" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Tool Call</text>
+
+                <!-- Connecting Path 3: 2. Searching ➔ 3. Referencing -->
+                <path id="s2-link-search-ref" class="s2-link" d="M 602 116 L 648 116" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray)" />
+                <text x="625" y="107" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Evidence</text>
+
+                <!-- Connecting Path 4: 3. Referencing ➔ Grounded Response -->
+                <path id="s2-link-ref-response" class="s2-link" d="M 816 116 L 896 116" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray)" />
+                <text x="856" y="107" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f766e">Verified</text>
+
+                <!-- Connecting Path 5: Loop 1 Feedback Loopback (Curved from Referencing back to Reasoning) -->
+                <path id="s2-link-loopback" class="s2-link" d="M 732 174 L 732 222 Q 732 236 712 236 L 324 236 Q 304 236 304 222 L 304 176" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#s2-arr-blue)" />
+                
+                <!-- Loopback Pill / Label (Generous 380px Width, Fully Contained) -->
+                <g id="s2-loop-pill-group" transform="translate(518, 236)">
+                  <rect x="-190" y="-13" width="380" height="26" rx="13" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+                  <text x="0" y="4" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Pass 1: Partial Context ➔ Re-querying Local Index</text>
+                </g>
+
+                <!-- ================= NODE 1: User Query ================= -->
+                <g id="s2-node-query" class="s2-node" transform="translate(24, 58)">
+                  <rect width="142" height="116" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="14" width="76" height="18" rx="4" fill="#f1f5f9" />
+                  <text x="52" y="26.5" text-anchor="middle" font-size="9" font-weight="700" fill="#334155">USER QUERY</text>
+                  <text x="71" y="58" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">User Query</text>
+                  <text x="71" y="78" text-anchor="middle" font-size="12" fill="#64748b">Flutter Mobile App</text>
+                  <rect x="16" y="88" width="110" height="18" rx="5" fill="#eff6ff" />
+                  <text x="71" y="100.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1e3a8a">"Scaling Laws?"</text>
+                </g>
+
+                <!-- ================= NODE 2: 1. Reasoning ================= -->
+                <g id="s2-node-reasoning" class="s2-node" transform="translate(220, 58)">
+                  <rect width="168" height="116" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="14" width="86" height="18" rx="4" fill="#eff6ff" />
+                  <text x="57" y="26.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1e3a8a">1. REASONING</text>
+                  <text x="84" y="58" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">Reasoning</text>
+                  <text x="84" y="78" text-anchor="middle" font-size="12" fill="#64748b">Vertex AI Gemini</text>
+                  <rect x="20" y="88" width="128" height="18" rx="5" fill="#f1f5f9" />
+                  <text x="84" y="100.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="#334155">Pass 1: Ingress Probe</text>
+                </g>
+
+                <!-- ================= NODE 3: 2. Searching ================= -->
+                <g id="s2-node-searching" class="s2-node" transform="translate(434, 58)">
+                  <rect width="168" height="116" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="14" width="86" height="18" rx="4" fill="#f1f5f9" />
+                  <text x="57" y="26.5" text-anchor="middle" font-size="9" font-weight="700" fill="#334155">2. SEARCHING</text>
+                  <text x="84" y="58" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">Searching</text>
+                  <text x="84" y="78" text-anchor="middle" font-size="12" fill="#64748b">On-Device pdfrx</text>
+                  <rect x="24" y="88" width="120" height="18" rx="5" fill="#f1f5f9" />
+                  <text x="84" y="100.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="#334155">Pass 2: Targeted Index</text>
+                </g>
+
+                <!-- ================= NODE 4: 3. Referencing (Enclosed Cleanly Inside Loop) ================= -->
+                <g id="s2-node-referencing" class="s2-node" transform="translate(648, 58)">
+                  <rect width="168" height="116" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="14" width="94" height="18" rx="4" fill="#f1f5f9" />
+                  <text x="61" y="26.5" text-anchor="middle" font-size="9" font-weight="700" fill="#0f766e">3. REFERENCING</text>
+                  <text x="84" y="58" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">Referencing</text>
+                  <text x="84" y="78" text-anchor="middle" font-size="12" fill="#64748b">Evidence Extraction</text>
+                  <rect x="20" y="88" width="128" height="18" rx="5" fill="#ecfdf5" />
+                  <text x="84" y="100.5" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f766e">Sec 2.3 &amp; Sec 7.2</text>
+                </g>
+
+                <!-- ================= NODE 5: Grounded Response ================= -->
+                <g id="s2-node-response" class="s2-node" transform="translate(896, 58)">
+                  <rect width="152" height="116" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="14" width="76" height="18" rx="4" fill="#ecfdf5" />
+                  <text x="52" y="26.5" text-anchor="middle" font-size="9" font-weight="700" fill="#0f766e">RESPONSE</text>
+                  <text x="76" y="58" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">Grounded Output</text>
+                  <text x="76" y="78" text-anchor="middle" font-size="12" fill="#64748b">Mobile Chat UI</text>
+                  <rect x="18" y="88" width="116" height="18" rx="5" fill="#ecfdf5" />
+                  <text x="76" y="100.5" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0f766e">[P. 52, 58, 229]</text>
+                </g>
+              </svg>
+            </div>
+
+            <!-- Small Screen Vertical Flowchart Variant (Shown under 600px) -->
+            <div class="s2-vertical-svg-container">
+              <svg class="s2-vertical-flow-svg" viewBox="0 0 340 700">
+                <defs>
+                  <marker id="s2-arr-blue-v" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1e3a8a" />
+                  </marker>
+                  <marker id="s2-arr-gray-v" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#94a3b8" />
+                  </marker>
+                </defs>
+
+                <!-- Boundary: Agent Tool-Calling Loop -->
+                <rect x="25" y="145" width="280" height="390" rx="16" fill="#fcfcfd" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="5 4" />
+                <rect x="40" y="153" width="180" height="20" rx="5" fill="#f1f5f9" />
+                <text x="130" y="167" text-anchor="middle" font-size="10" font-weight="700" fill="#334155" letter-spacing="0.04em">AGENT TOOL-CALLING LOOP</text>
+
+                <!-- NODE 1: User Query -->
+                <g class="s2-node s2-node-query" id="s2-node-query-v" transform="translate(45, 20)">
+                  <rect width="250" height="85" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="10" width="76" height="18" rx="4" fill="#f1f5f9" />
+                  <text x="52" y="22.5" text-anchor="middle" font-size="9" font-weight="700" fill="#334155">USER QUERY</text>
+                  <text x="125" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">User Query</text>
+                  <text x="125" y="68" text-anchor="middle" font-size="11.5" fill="#64748b">"Scaling Laws over 6 months?"</text>
+                </g>
+
+                <!-- Down Link 1 -->
+                <path class="s2-link s2-link-query-reason" id="s2-link-query-reason-v" d="M 170 105 L 170 185" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray-v)" />
+
+                <!-- NODE 2: 1. Reasoning -->
+                <g class="s2-node s2-node-reasoning" id="s2-node-reasoning-v" transform="translate(45, 185)">
+                  <rect width="250" height="85" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="10" width="86" height="18" rx="4" fill="#eff6ff" />
+                  <text x="57" y="22.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1e3a8a">1. REASONING</text>
+                  <text x="125" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Reasoning</text>
+                  <text x="125" y="68" text-anchor="middle" font-size="11.5" fill="#64748b">Vertex AI Gemini 1.5 Flash</text>
+                </g>
+
+                <!-- Down Link 2 -->
+                <path class="s2-link s2-link-reason-search" id="s2-link-reason-search-v" d="M 170 270 L 170 310" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray-v)" />
+
+                <!-- NODE 3: 2. Searching -->
+                <g class="s2-node s2-node-searching" id="s2-node-searching-v" transform="translate(45, 310)">
+                  <rect width="250" height="85" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="10" width="86" height="18" rx="4" fill="#f1f5f9" />
+                  <text x="57" y="22.5" text-anchor="middle" font-size="9" font-weight="700" fill="#334155">2. SEARCHING</text>
+                  <text x="125" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Searching</text>
+                  <text x="125" y="68" text-anchor="middle" font-size="11.5" fill="#64748b">On-Device pdfrx Index</text>
+                </g>
+
+                <!-- Down Link 3 -->
+                <path class="s2-link s2-link-search-ref" id="s2-link-search-ref-v" d="M 170 395 L 170 435" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray-v)" />
+
+                <!-- NODE 4: 3. Referencing -->
+                <g class="s2-node s2-node-referencing" id="s2-node-referencing-v" transform="translate(45, 435)">
+                  <rect width="250" height="85" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="10" width="94" height="18" rx="4" fill="#f1f5f9" />
+                  <text x="61" y="22.5" text-anchor="middle" font-size="9" font-weight="700" fill="#0f766e">3. REFERENCING</text>
+                  <text x="125" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Referencing</text>
+                  <text x="125" y="68" text-anchor="middle" font-size="11.5" fill="#0f766e">Evidence: Sec 2.3 &amp; 7.2</text>
+                </g>
+
+                <!-- Down Link 4 -->
+                <path class="s2-link s2-link-ref-response" id="s2-link-ref-response-v" d="M 170 520 L 170 570" stroke="#cbd5e1" stroke-width="2" marker-end="url(#s2-arr-gray-v)" />
+
+                <!-- NODE 5: Grounded Response -->
+                <g class="s2-node s2-node-response" id="s2-node-response-v" transform="translate(45, 570)">
+                  <rect width="250" height="85" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+                  <rect x="14" y="10" width="76" height="18" rx="4" fill="#ecfdf5" />
+                  <text x="52" y="22.5" text-anchor="middle" font-size="9" font-weight="700" fill="#0f766e">RESPONSE</text>
+                  <text x="125" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Grounded Output</text>
+                  <text x="125" y="68" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0f766e">Citations [P. 52, 58, 229]</text>
+                </g>
+
+                <!-- Loopback Curved Link from Referencing back to Reasoning -->
+                <path class="s2-link s2-link-loopback" id="s2-link-loopback-v" d="M 295 477 L 318 477 Q 328 477 328 460 L 328 245 Q 328 227 305 227 L 295 227" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#s2-arr-blue-v)" />
+
+                <!-- Loopback Pill Group -->
+                <g class="s2-loop-pill-group" id="s2-loop-pill-group-v" transform="translate(328, 350)" style="display: none;">
+                  <rect x="-65" y="-12" width="130" height="24" rx="12" fill="#ffffff" stroke="#1e3a8a" stroke-width="1.5" />
+                  <text x="0" y="4" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1e3a8a">Pass 1: Re-querying</text>
+                </g>
+              </svg>
+            </div>
+
+            <!-- Sleek, Uncluttered Apple Live Trajectory Bar -->
+            <div class="mrkl-execution-hub" style="background: #ffffff; border-radius: 12px; padding: 12px 18px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                  <span class="hub-badge badge-nav" id="s2-hub-badge" style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; flex-shrink: 0; white-space: nowrap;">Pass 1 of 2</span>
+                  <span id="s2-hub-title" style="font-size: 14.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Gemini 1.5 Flash probes TOC Page 53 · Missing formula &amp; lifecycle ➔ Loops back autonomously
+                  </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                  <span class="brand-pill" id="s2-hub-gate-pill" style="background: #f1f5f9; color: #334155; font-size: 12px; font-weight: 600; flex-shrink: 0; white-space: nowrap;">
+                    Pass 1 · Ingress Probe
+                  </span>
+                  <span class="brand-pill" style="background: #f1f5f9; color: #475569; font-size: 12px; flex-shrink: 0; white-space: nowrap;" id="s2-hub-latency">
+                    340ms
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ==============================================
+               VIEW 2: EVIDENCE & CHAT STUDIO (DEEP DIVE INSPECTOR)
+               ============================================== -->
+          <div id="s2-view-studio" style="flex: 1; min-height: 0; display: none; flex-direction: column; gap: 10px;">
+            
+            <!-- 3 Phases Grid -->
+            <div class="phases-row">
+              
+              <!-- Phase 1 -->
+              <div class="phase-card active-phase" id="phase-card-1" style="--phase-color: var(--apple-blue); --phase-bg: var(--apple-blue-bg);">
+                <div class="phase-header">
+                  <span class="phase-title">1. Reasoning</span>
+                  <span class="phase-badge" id="phase-badge-1" style="background: var(--apple-blue); color: #fff;">● Active Reasoning</span>
+                </div>
+                <p class="phase-desc">
+                  FastAPI classifies intent as <code>response</code> (99.7% conf). Gemini 1.5 Flash computes attention budget and probes Intro Page 53 rather than guessing.
+                </p>
+                <div class="code-box-white">Tool: getPageContent([53]) ➔ Discovers "Universal Scaling Law" on Page 52</div>
+              </div>
+
+              <!-- Phase 2 -->
+              <div class="phase-card" id="phase-card-2" style="--phase-color: var(--apple-orange); --phase-bg: var(--apple-orange-bg);">
+                <div class="phase-header">
+                  <span class="phase-title">2. Searching</span>
+                  <span class="phase-badge" id="phase-badge-2">Edge Traversal</span>
+                </div>
+                <p class="phase-desc">
+                  Scans local index for <code>universal scaling law</code> (Hits P. 52 &amp; 229). Relaxes search to extract Section 1.3 formulas and Figure 1.10.
+                </p>
+                <div class="code-box-white">Tool: searchPdfContent("scaling laws") ➔ Chapter 1.3 + P. 57-58 Formulas</div>
+              </div>
+
+              <!-- Phase 3 -->
+              <div class="phase-card" id="phase-card-3" style="--phase-color: var(--apple-green); --phase-bg: var(--apple-green-bg);">
+                <div class="phase-header">
+                  <span class="phase-title">3. Referencing</span>
+                  <span class="phase-badge" id="phase-badge-3">Grounded Synthesis</span>
+                </div>
+                <p class="phase-desc">
+                  Synthesizes structured briefing citing <strong>Section 2.3</strong>, <strong>Figure 2.4</strong>, and <strong>Section 7.2</strong> with direct page citations.
+                </p>
+                <div class="code-box-white">Output: Grounded Synthesis Delivered ➔ [P. 52], [P. 58], [P. 229]</div>
+              </div>
+
+            </div>
+
+            <!-- Center Split Workspace: Document Context (Left) + Grounded Chat Output (Right) -->
+            <div class="slide2-workspace">
+
+              <!-- Left: Document Context & Live Highlighting Engine -->
+              <div class="doc-preview-panel">
+                <div class="doc-preview-header">
+                  <div class="doc-file-info">
+                    <span class="doc-page-badge" style="background: var(--brand-navy); color: #fff;">PDF</span>
+                    <span style="font-weight: 700; color: #0f172a;">Designing Machine Learning Systems (Chip Huyen).pdf</span>
+                    <span class="doc-page-badge" id="s2-doc-page-pill">Page 52 of 384</span>
+                  </div>
+                  <span class="brand-pill" style="font-size: 11.5px; font-weight: 700; background: var(--brand-navy-bg); color: var(--brand-navy);">pdfrx Local Engine · Page Passages</span>
+                </div>
+
+                <div class="doc-preview-body" id="s2-doc-body">
+                  <div class="doc-heading">Chapter 2: Principles of Machine Learning Systems Design</div>
+                  <p class="doc-paragraph">
+                    Machine learning systems operate under strict physical and architectural boundaries. While model capacity scales with parameter count, operational feasibility is dictated by compute, memory, and network throughput.
+                  </p>
+                  <div class="doc-highlight-box" style="border-left-color: var(--brand-navy); background: var(--brand-navy-bg); color: var(--brand-navy);">
+                    <strong>Section 2.3: Resource Constraints &amp; Compute Regimes (Page 52)</strong><br/>
+                    <em>"During early development, systems are compute-bound by raw training FLOPs. Over a sustained 6-month lifecycle, production shifts from training compute to inference latency bounds and memory bottlenecks."</em>
+                  </div>
+                  <p class="doc-paragraph" style="color: #64748b; font-size: 13px;">
+                    ↳ Model inspects Section 2.3 on Page 52; retrieves foundation compute regimes.
+                  </p>
+                </div>
+
+                <div class="doc-preview-footer">
+                  <span id="s2-doc-status-text" style="font-family: SFMono-Regular, Consolas, monospace; font-size: 12px; font-weight: 600; color: var(--brand-navy);">
+                    Tool Active: getPageContent([52]) ➔ Discovered Section 2.3 Resource Constraints
+                  </span>
+                  <span style="font-size: 11.5px; font-weight: 600; color: #64748b;">Local Device Sandbox</span>
+                </div>
+              </div>
+
+              <!-- Right: Live Grounded Chat Output & Verifiable Citation Mechanism -->
+              <div class="grounded-chat-panel">
+                <div class="grounded-chat-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="pulse-dot" style="width: 8px; height: 8px; background: #22c55e;"></div>
+                    <span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">Gemini 1.5 Flash · Grounded Synthesis</span>
+                  </div>
+                  <span class="brand-pill" id="s2-grounding-pill" style="font-size: 11.5px; font-weight: 700; background: #dcfce7; color: #15803d;">
+                    Citations Checked Against Page Text
+                  </span>
+                </div>
+
+                <div class="grounded-chat-body" id="s2-chat-body">
+                  <div class="chat-bubble-user">
+                    I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline... what are things to be careful about?
+                  </div>
+                  <div class="chat-bubble-model" style="border-left: 3px solid var(--brand-navy);">
+                    <div style="font-weight: 700; color: var(--brand-navy); font-size: 13px; margin-bottom: 4px;">Pass 1: Reasoning Ingress</div>
+                    <span style="color: #475569;">
+                      Classified intent as <strong>response</strong> (99.7% confidence). Probing Section 2.3 on Page 52 of 384-page volume to locate author's exact compute constraints...
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Interactive Citation Source Tray -->
+                <div class="grounded-citations-tray">
+                  <div class="citations-tray-title">Verified Source Citations (Source Document)</div>
+                  <div class="citations-tray-chips" id="s2-citation-chips">
+                    <span class="citation-chip-item" style="border-color: #93c5fd; color: var(--brand-navy); font-weight: 700;">
+                      <strong>[P. 52]</strong> Section 2.3: Compute Regimes
+                    </span>
+                    <span class="citation-chip-item" style="opacity: 0.5;">
+                      [P. 52] Awaiting Local Search...
+                    </span>
+                    <span class="citation-chip-item" style="opacity: 0.5;">
+                      [P. 58] Awaiting Extraction...
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Live Status Caption Bar -->
+        <div class="flow-caption">
+          <div class="caption-highlight">
+            <span id="s2-step-badge" class="brand-pill">Pass 1: Reasoning</span>
+            <span id="s2-step-text">Gemini 1.5 Flash avoids guessing; requests TOC &amp; intro page 53 to find scaling principles</span>
+          </div>
+          <div style="font-family: SFMono-Regular, Consolas, monospace; font-size: 12.5px;">
+            Context Efficiency: <span style="color: var(--brand-navy); font-weight: 700;">~2,800 tokens/turn vs 250k+ full-book context</span> <span style="color: var(--text-tertiary); font-size: 11px; margin-left: 8px;">(p50 benchmarks: AWS ap-south-1 / Pixel 7)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 3: PRESENTATION MODE (PRE-POPULATED SPEECH QUOTE)
+         ========================================== -->
+    <section class="slide" id="slide-3">
+      <div class="slide-header">
+        <div class="slide-title-group">
+          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); margin: 0;">
+            Presentation Mode: Lookahead Page Navigation &amp; Speech
+          </h1>
+          <p style="font-size: 14.5px; color: var(--text-secondary); margin-top: 4px; font-weight: 500;">
+            Lookahead execution: Next-page content is pre-cached before current narration finishes.
+          </p>
+        </div>
+      </div>
+
+      <!-- Presentation Pipeline Metrics Strip -->
+      <div class="metric-grid-3">
+        <div class="metric-card-white" style="--card-color: #1e3a8a;">
+          <span class="metric-label">Continuous Playback</span>
+          <span class="metric-val">Lookahead Pre-fetch</span>
+          <span class="metric-sub">Next-page text cached in memory before narration finishes</span>
+        </div>
+
+        <div class="metric-card-white" style="--card-color: #334155;">
+          <span class="metric-label">Concurrent Execution</span>
+          <span class="metric-val">3-Way Parallel Batch</span>
+          <span class="metric-sub">Simultaneous UI page flip, local TTS speech &amp; background fetch</span>
+        </div>
+
+        <div class="metric-card-white" style="--card-color: #0f766e;">
+          <span class="metric-label">On-Device Speech</span>
+          <span class="metric-val">Flutter TTS Engine</span>
+          <span class="metric-sub">Zero cloud voice egress · Native on-device audio synthesis</span>
+        </div>
+      </div>
+
+      <!-- Prominent Apple Query, Model & Strategy Banner -->
+      <div class="apple-query-strip">
+        <div class="query-item">
+          <span class="query-tag">User Query</span>
+          <span class="query-text">"Can you present me this chapter" <span style="color: var(--text-tertiary); font-size: 12px;">(Atomic Habits · P. 17–23)</span></span>
+        </div>
+
+        <div class="query-item">
+          <span class="query-tag" style="color: var(--apple-green);">Model Responded</span>
+          <div class="model-badge">
+            <span style="color: var(--apple-green);">●</span> Vertex AI (Gemini 1.5 Flash) + Flutter TTS
+          </div>
+        </div>
+
+        <div class="query-item">
+          <span class="query-tag" style="color: var(--brand-slate);">Parallel Tool Batching</span>
+          <span class="query-text" style="font-family: SFMono-Regular, Consolas, monospace; color: var(--brand-slate); font-size: 12.5px;">
+            navigateToPage + synthesizeSpeech + getPageContent
+          </span>
+        </div>
+      </div>
+
+      <!-- Main Looping Presentation Stage -->
+      <div class="flow-stage">
+        <div class="slide3-pipeline">
+
+          <!-- Active Tool Call Execution Card (Dynamic on Every Loop Step) -->
+          <div class="tool-execution-hub">
+            <div class="hub-left" style="min-width: 0;">
+              <span class="hub-badge badge-nav" id="s3-hub-nav-badge" style="flex-shrink: 0;">Nav(17)</span>
+              <span class="hub-badge badge-tts" id="s3-hub-tts-badge" style="flex-shrink: 0;">Speech TTS</span>
+              <span class="hub-badge badge-fetch" id="s3-hub-fetch-badge" style="flex-shrink: 0;">Pre-fetch(18)</span>
+              <div class="hub-content" style="min-width: 0;">
+                <span class="hub-title" id="s3-hub-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Turn 1 Executing on Device &amp; Audio Stream</span>
+                <span class="hub-code" id="s3-hub-code" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">navigateToPage({"pageNumber": 17}) + synthesizeSpeech(...) + getPageContent([18])</span>
+              </div>
+            </div>
+            <div class="hub-right" style="flex-shrink: 0;">
+              <span class="brand-pill" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4;">
+                Pre-Cached in RAM
+              </span>
+            </div>
+          </div>
+
+          <!-- 3 Synchronized Parallel Tracks (Apple Blue, Green, Orange) -->
+          <div class="tracks-scroll-container">
+            <div class="swipe-hint">⇄ Swipe horizontally to inspect lookahead page turns</div>
+            <div class="tracks-wrapper">
+
+            <!-- Track 1: Reader UI Navigation (Looking At Page) -->
+            <div class="track-row">
+              <div class="track-meta">
+                <span class="track-title" style="color: var(--apple-blue);">1. Reader UI Flip</span>
+                <span class="track-sub" style="font-size: 11.5px;">navigateToPage(N)</span>
+              </div>
+              <div class="track-nodes" id="s3-track-ui">
+                <div class="node-item" data-page="17">
+                  <span class="node-pnum">P. 17</span>
+                  <span class="node-topic">Why Habits Matter</span>
+                </div>
+                <div class="node-item" data-page="18">
+                  <span class="node-pnum">P. 18</span>
+                  <span class="node-topic">3 Layers of Change</span>
+                </div>
+                <div class="node-item" data-page="19">
+                  <span class="node-pnum">P. 19</span>
+                  <span class="node-topic">Outcome vs Identity</span>
+                </div>
+                <div class="node-item" data-page="20">
+                  <span class="node-pnum">P. 20</span>
+                  <span class="node-topic">Casting Votes</span>
+                </div>
+                <div class="node-item" data-page="21">
+                  <span class="node-pnum">P. 21</span>
+                  <span class="node-topic">2-Step Recipe</span>
+                </div>
+                <div class="node-item" data-page="22">
+                  <span class="node-pnum">P. 22</span>
+                  <span class="node-topic">Small Wins</span>
+                </div>
+                <div class="node-item" data-page="23">
+                  <span class="node-pnum">P. 23</span>
+                  <span class="node-topic">Chapter Summary</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Track 2: Spoken Audio Narration (Speaking Page Audio) -->
+            <div class="track-row">
+              <div class="track-meta">
+                <span class="track-title" style="color: var(--apple-green);">2. Flutter TTS Voice</span>
+                <span class="track-sub" style="font-size: 11.5px;">synthesizeSpeech(...)</span>
+              </div>
+              <div class="track-nodes" id="s3-track-voice">
+                <div class="node-item" data-page="17">
+                  <span class="node-pnum">TTS 17</span>
+                  <span class="node-topic">On-Device</span>
+                </div>
+                <div class="node-item" data-page="18">
+                  <span class="node-pnum">TTS 18</span>
+                  <span class="node-topic">On-Device</span>
+                </div>
+                <div class="node-item" data-page="19">
+                  <span class="node-pnum">TTS 19</span>
+                  <span class="node-topic">On-Device</span>
+                </div>
+                <div class="node-item" data-page="20">
+                  <span class="node-pnum">TTS 20</span>
+                  <span class="node-topic">On-Device</span>
+                </div>
+                <div class="node-item" data-page="21">
+                  <span class="node-pnum">TTS 21</span>
+                  <span class="node-topic">On-Device</span>
+                </div>
+                <div class="node-item" data-page="22">
+                  <span class="node-pnum">TTS 22</span>
+                  <span class="node-topic">On-Device</span>
+                </div>
+                <div class="node-item" data-page="23">
+                  <span class="node-pnum">Final TTS</span>
+                  <span class="node-topic">Complete</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Track 3: Background Look-Ahead Pre-fetch (Pre-fetching Next Page) -->
+            <div class="track-row">
+              <div class="track-meta">
+                <span class="track-title" style="color: #334155;">3. Lookahead Cache</span>
+                <span class="track-sub" style="font-size: 11.5px;">getPageContent([N+1])</span>
+              </div>
+              <div class="track-nodes" id="s3-track-prefetch">
+                <div class="node-item" data-page="17">
+                  <span class="node-pnum">Fetch [18]</span>
+                  <span class="node-topic">Pre-Cached</span>
+                </div>
+                <div class="node-item" data-page="18">
+                  <span class="node-pnum">Fetch [19]</span>
+                  <span class="node-topic">Pre-Cached</span>
+                </div>
+                <div class="node-item" data-page="19">
+                  <span class="node-pnum">Fetch [20]</span>
+                  <span class="node-topic">Pre-Cached</span>
+                </div>
+                <div class="node-item" data-page="20">
+                  <span class="node-pnum">Fetch [21]</span>
+                  <span class="node-topic">Pre-Cached</span>
+                </div>
+                <div class="node-item" data-page="21">
+                  <span class="node-pnum">Fetch [22]</span>
+                  <span class="node-topic">Pre-Cached</span>
+                </div>
+                <div class="node-item" data-page="22">
+                  <span class="node-pnum">Fetch [23]</span>
+                  <span class="node-topic">Pre-Cached</span>
+                </div>
+                <div class="node-item" data-page="23">
+                  <span class="node-pnum">Ready</span>
+                  <span class="node-topic">RAM Buffer</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          </div>
+
+          <!-- Spoken Speech Playback Audio Card (Flutter TTS On-Device & Large Readable Typography) -->
+          <div class="speech-playback-card" style="padding: 14px 22px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+              <div class="apple-soundwave">
+                <div class="soundwave-bar"></div>
+                <div class="soundwave-bar"></div>
+                <div class="soundwave-bar"></div>
+                <div class="soundwave-bar"></div>
+                <div class="soundwave-bar"></div>
+              </div>
+              <span class="brand-pill" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; font-size: 12px; font-weight: 700;">Flutter TTS On-Device</span>
+            </div>
+            <div class="speech-text" style="font-size: 18px; line-height: 1.5; font-style: normal; min-height: 44px;">
+              <strong id="s3-speech-page" style="color: #0f766e; font-style: normal; margin-right: 10px; font-size: 19px; font-weight: 700; white-space: nowrap;">Page 17:</strong>
+              <span id="s3-speech-content" style="font-size: 18px; font-weight: 500; color: #0f172a;">"To build lasting habits, shift your self-identity first—it's far easier to stick to a behavior when you believe it's who you are."</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Live Status Caption Bar -->
+        <div class="flow-caption">
+          <div class="caption-highlight">
+            <span class="brand-pill" id="s3-status-pill" style="background: var(--brand-teal-bg); color: var(--brand-teal);">Turn 1 Active</span>
+            <span>Gemini 1.5 Flash instructs: Flip screen to Page <strong id="s3-cap-cur" style="color: var(--text-primary);">17</strong>, synthesize speech, while pre-fetching Page <strong id="s3-cap-next" style="color: var(--brand-slate);">18</strong> into memory</span>
+          </div>
+          <div style="font-family: SFMono-Regular, Consolas, monospace; font-size: 12.5px;">
+            Lookahead Buffer: <span style="color: #0f766e; font-weight: 700;">Next page ready before narration ends</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       MODAL 1: SEQUENCE DIAGRAM SPECIFICATIONS (MERMAID & PLANTUML)
+       ========================================== -->
+  <div class="modal-overlay" id="sequenceModal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h2>Production Architecture Sequence Specifications</h2>
+          <p>Formalized lifecycle: Flutter Edge ➔ Node.js Gateway ➔ FastAPI Classifier ➔ Gemini 1.5 Flash (Vertex AI) ➔ Flutter TTS</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="modal-tabs">
+            <button class="modal-tab-btn active" onclick="switchSeqTab('mermaidCode')">Mermaid Spec (.mmd)</button>
+            <button class="modal-tab-btn" onclick="switchSeqTab('plantumlCode')">PlantUML Spec (.puml)</button>
+          </div>
+          <button class="btn" onclick="copyCurrentCode()">Copy Code</button>
+          <button class="btn touch-target" style="font-size: 14px; font-weight: 700;" onclick="closeModal('sequenceModal')">✕ Close</button>
+        </div>
+      </div>
+      <div class="modal-body" id="sequenceModalBody">
+        <div id="mermaidCodeTab">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--apple-blue);">docs/architecture_sequence.mmd (Pure Mermaid Syntax)</span>
+            <span style="font-size: 11px; color: var(--text-tertiary);">Directly loadable in GitHub, Obsidian, VS Code &amp; Mermaid Live Editor</span>
+          </div>
+          <pre class="code-box-white" id="mermaidPreBlock" style="max-height: 520px; overflow-y: auto;"></pre>
+        </div>
+
+        <div id="plantumlCodeTab" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--apple-purple);">docs/architecture_sequence.puml (PlantUML Apple Skinparam Theme)</span>
+            <span style="font-size: 11px; color: var(--text-tertiary);">Renders with PlantUML Server &amp; VS Code PlantUML Extension</span>
+          </div>
+          <pre class="code-box-white" id="plantumlPreBlock" style="max-height: 520px; overflow-y: auto;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 2: MOTIONITY VIDEO KEYFRAME SPECIFICATIONS (JSON)
+       ========================================== -->
+  <div class="modal-overlay" id="motionModal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h2>Motionity &amp; Video Keyframe Animation Specifications</h2>
+          <p>assets/presentation_motion_keyframes.json · 1920x1080 @ 60fps · 18ms/char typewriter rate · 1.9s loop cadence</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button class="btn" onclick="copyMotionJson()">Copy JSON Spec</button>
+          <button class="btn touch-target" style="font-size: 14px; font-weight: 700;" onclick="closeModal('motionModal')">✕ Close</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <pre class="code-box-white" id="motionJsonPreBlock" style="max-height: 540px; overflow-y: auto;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seamless Borderless Apple Bottom Bar -->
+  <footer class="bottom-bar">
+    <div class="slide-tabs">
+      <div class="slide-tab active touch-target" onclick="showSlide(1)">
+        <span class="tab-label-full">1. Architecture</span>
+        <span class="tab-label-short">1. Arch</span>
+      </div>
+      <div class="slide-tab touch-target" onclick="showSlide(2)">
+        <span class="tab-label-full">2. Agent Loop</span>
+        <span class="tab-label-short">2. Loop</span>
+      </div>
+      <div class="slide-tab touch-target" onclick="showSlide(3)">
+        <span class="tab-label-full">3. Presentation Mode</span>
+        <span class="tab-label-short">3. Present</span>
+      </div>
+    </div>
+
+    <div class="bottom-kbd-hints" style="display: flex; align-items: center; gap: 8px;">
+      <span><span class="kbd">←</span> <span class="kbd">→</span> Slide</span>
+      <span style="opacity: 0.25;">•</span>
+      <span><span class="kbd">Space</span> Pause</span>
+      <span style="opacity: 0.25;">•</span>
+      <span><span class="kbd">F</span> Fullscreen</span>
+      <span style="opacity: 0.25;">•</span>
+      <span style="font-size: 11px; color: var(--text-tertiary);">* AWS ap-south-1 / Pixel 7</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <select class="speed-select" id="cadenceSelect" onchange="changeCadence(this.value)" title="Loop Cadence">
+        <option value="1900">1.9s</option>
+        <option value="1200">1.2s</option>
+        <option value="3000">3.0s</option>
+      </select>
+      <button class="btn touch-target" id="playPauseBtn" onclick="togglePlayPause()" title="Pause / Resume Loop">
+        <span id="playPauseLabel">Pause</span>
+      </button>
+      <!-- Dev tools (Specs/Keyframes) hidden in investor view; accessible via keyboard 'D' -->
+      <button class="btn" onclick="openModal('sequenceModal')" id="devSpecsBtn" style="display: none;">
+        Specs
+      </button>
+      <button class="btn btn-secondary-hide touch-target" onclick="window.print()" title="Export PDF">
+        PDF
+      </button>
+      <button class="btn btn-icon btn-secondary-hide touch-target" onclick="toggleFullScreen()" title="Fullscreen Mode (F)">
+        Fullscreen
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    // Global Deck State
+    let currentSlide = 1;
+    const totalSlides = 3;
+    let isPlaying = true;
+    let currentCadenceMs = 1900;
+    let loopIntervalTimer = null;
+
+    // Slide Switching
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+      currentSlide = index;
+
+      // Reset scroll position on mobile when switching slides
+      if (window.innerWidth <= 900) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        slide.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      document.querySelectorAll('.slide-tab').forEach((tab, idx) => {
+        tab.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      if (currentSlide === 1) {
+        runSlide1Loop();
+      } else if (currentSlide === 2) {
+        startSlide2Typewriter();
+        runSlide2Loop();
+      } else if (currentSlide === 3) {
+        initSlide3();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) showSlide(currentSlide + 1);
+      else showSlide(1);
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) showSlide(currentSlide - 1);
+      else showSlide(totalSlides);
+    }
+
+    function togglePlayPause() {
+      isPlaying = !isPlaying;
+      document.getElementById('playPauseLabel').textContent = isPlaying ? 'Pause' : 'Play';
+    }
+
+    function changeCadence(newCadence) {
+      currentCadenceMs = parseInt(newCadence, 10);
+      resetIntervalTimer();
+    }
+
+    function resetIntervalTimer() {
+      if (loopIntervalTimer) clearInterval(loopIntervalTimer);
+      loopIntervalTimer = setInterval(() => {
+        if (currentSlide === 1) runSlide1Loop();
+        else if (currentSlide === 2) runSlide2Loop();
+        else if (currentSlide === 3) runSlide3Loop();
+      }, currentCadenceMs);
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    // Modal Sheet Management
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    let activeSeqTab = 'mermaidCode';
+    function switchSeqTab(tabId) {
+      activeSeqTab = tabId;
+      document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('mermaidCodeTab').style.display = tabId === 'mermaidCode' ? 'block' : 'none';
+      document.getElementById('plantumlCodeTab').style.display = tabId === 'plantumlCode' ? 'block' : 'none';
+    }
+
+    function copyCurrentCode() {
+      const code = activeSeqTab === 'mermaidCode' 
+        ? document.getElementById('mermaidPreBlock').textContent
+        : document.getElementById('plantumlPreBlock').textContent;
+      navigator.clipboard.writeText(code).then(() => alert('Code copied to clipboard!'));
+    }
+
+    function copyMotionJson() {
+      const json = document.getElementById('motionJsonPreBlock').textContent;
+      navigator.clipboard.writeText(json).then(() => alert('Motionity JSON copied to clipboard!'));
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal('sequenceModal');
+        closeModal('motionModal');
+      } else if (e.key === 'ArrowRight') nextSlide();
+      else if (e.key === 'ArrowLeft') prevSlide();
+      else if (e.key === ' ') {
+        e.preventDefault();
+        togglePlayPause();
+      }
+      else if (e.key === '1') showSlide(1);
+      else if (e.key === '2') showSlide(2);
+      else if (e.key === '3') showSlide(3);
+      else if (e.key.toLowerCase() === 'f') toggleFullScreen();
+      else if (e.key.toLowerCase() === 'd') {
+        const b = document.getElementById('devSpecsBtn');
+        if (b) b.style.display = b.style.display === 'none' ? 'inline-flex' : 'none';
+      }
+    });
+
+    // ========================================================
+    // SLIDE 1: REAL APPLICATION ARCHITECTURE LOOP (ALL TOOLS ROUTE VIA PROXY)
+    // ========================================================
+    const s1Steps = [
+      {
+        activeNodeIds: ['node-flutter', 'node-proxy'],
+        colorClasses: { 'node-flutter': 'active-node-flutter', 'node-proxy': 'active-node-proxy' },
+        activeLinks: ['link-flutter-proxy'],
+        badge: 'Query Ingress',
+        text: 'User enters query · Document stays in local sandbox; only model-requested passages route via Gateway',
+        transport: 'WebSocket Frame: wss://gateway.talktojiva.com/ws (TLS)',
+        detailTitle: 'Flutter Mobile App (Edge Client)',
+        detailPill: 'Client Sandbox',
+        detailDesc: 'Cross-platform mobile application holding the entire PDF locally in device sandbox storage.',
+        points: [
+          'PDF binary stored strictly in device sandbox; no bulk document upload',
+          'Persistent WebSocket connection to Node.js Gateway with session isolation',
+          'On-device pdfrx listeners execute search and page extraction locally'
+        ],
+        moatText: 'Local document storage guarantees privacy while eliminating cloud vector DB costs.'
+      },
+      {
+        activeNodeIds: ['node-proxy', 'node-classifier'],
+        colorClasses: { 'node-proxy': 'active-node-proxy', 'node-classifier': 'active-node-classifier' },
+        activeLinks: ['link-proxy-classifier'],
+        badge: 'Intent Pre-Routing',
+        text: 'Node.js Gateway routes query to PyTorch classifier (<15ms, 99.7% conf) · Tags intent before model runs',
+        transport: 'Internal Microservice: POST /predict',
+        detailTitle: 'Intent Pre-Classifier (PyTorch Microservice)',
+        detailPill: '<15ms Microservice',
+        detailDesc: 'Lightweight Transformer pre-classifies intent into navigation, response, or identification.',
+        points: [
+          'Pre-tags intent in <15ms so Vertex AI knows user objective upfront',
+          'Injects structured payload (intent: "response", conf: 0.997) into turn',
+          'Saves model reasoning tokens and reduces end-to-end response latency'
+        ],
+        moatText: 'Pre-classifying intent in <15ms slashes LLM context parsing overhead and directs tool calls.'
+      },
+      {
+        activeNodeIds: ['node-proxy', 'node-vertex'],
+        colorClasses: { 'node-proxy': 'active-node-proxy', 'node-vertex': 'active-node-vertex' },
+        activeLinks: ['link-proxy-vertex'],
+        badge: 'Vertex AI Ingress',
+        text: 'Node.js Gateway invokes Vertex AI with enriched intent tag and registered tool schemas',
+        transport: 'Node.js Gateway ➔ Vertex AI (Gemini 1.5 Flash)',
+        detailTitle: 'Vertex AI (Gemini 1.5 Flash Core)',
+        detailPill: 'Reasoning Engine',
+        detailDesc: 'Vertex AI evaluates query context against registered tools (searchPdfContent, getPageContent).',
+        points: [
+          'Gemini 1.5 Flash identifies document data needed and requests tools',
+          'Returns function call payload to Node.js Gateway (Gateway Dispatcher)',
+          'Vertex AI never connects directly to mobile devices; mediated by Gateway'
+        ],
+        moatText: 'All tool invocations route through Node.js Gateway with OpenTelemetry span correlation.'
+      },
+      {
+        activeNodeIds: ['node-vertex', 'node-proxy', 'node-flutter'],
+        colorClasses: { 'node-vertex': 'active-node-vertex', 'node-proxy': 'active-node-proxy', 'node-flutter': 'active-node-flutter' },
+        activeLinks: ['link-proxy-vertex', 'link-flutter-proxy'],
+        badge: 'Tool Call Dispatched via Gateway',
+        text: 'Vertex AI emits tool call · Node.js Gateway maps and routes request frame over WebSocket to Flutter',
+        transport: 'Vertex AI ➔ Node.js Gateway ➔ Flutter WebSocket',
+        detailTitle: 'Tool Request Dispatch via Node.js Gateway',
+        detailPill: 'Gateway Routed',
+        detailDesc: 'Vertex AI function call is translated into a client WebSocket envelope and dispatched to the phone.',
+        points: [
+          'Proxy maps Gemini tool call into client WebSocket frame with requestId',
+          'Transmits searchPdfContent or getPageContent over TLS WebSocket to Flutter',
+          'Arize Phoenix logs tool dispatch span for end-to-end observability'
+        ],
+        moatText: 'Centralized proxy routing provides complete auditability of all agent tool calls.'
+      },
+      {
+        activeNodeIds: ['node-flutter', 'node-proxy', 'node-vertex'],
+        colorClasses: { 'node-flutter': 'active-node-flutter', 'node-proxy': 'active-node-proxy', 'node-vertex': 'active-node-vertex' },
+        activeLinks: ['link-flutter-proxy', 'link-proxy-vertex'],
+        badge: 'Local Tool Return via Gateway',
+        text: 'Flutter executes tool locally via pdfrx · Sends extracted snippets through Gateway back to Vertex AI',
+        transport: 'Flutter pdfrx ➔ Node.js Gateway ➔ Vertex AI functionResponse',
+        detailTitle: 'Local Tool Execution & Return via Gateway',
+        detailPill: 'Passage-Only Egress',
+        detailDesc: 'The mobile app runs the tool locally against the PDF, then returns results through Node.js Gateway.',
+        points: [
+          'On-device pdfrx extracts snippets locally; full PDF pages never leave device',
+          'Flutter returns { type: "toolresponse", output } over WebSocket to Gateway',
+          'Gateway wraps results into Gemini functionResponse messages and resumes turn'
+        ],
+        moatText: 'Local execution turns the phone into a secure search engine, eliminating full document exposure.'
+      },
+      {
+        activeNodeIds: ['node-vertex', 'node-proxy', 'node-flutter'],
+        colorClasses: { 'node-vertex': 'active-node-vertex', 'node-proxy': 'active-node-proxy', 'node-flutter': 'active-node-flutter' },
+        activeLinks: ['link-proxy-vertex', 'link-flutter-proxy'],
+        badge: 'Grounded Response via Gateway',
+        text: 'Gemini 1.5 Flash synthesizes verified facts · Node.js Gateway delivers final response to Flutter UI',
+        transport: 'Vertex AI ➔ Node.js Gateway Envelope ➔ Flutter App',
+        detailTitle: 'Grounded Synthesis & Response Delivery',
+        detailPill: 'Complete Loop',
+        detailDesc: 'Vertex AI ingests tool responses, verifies evidence, and delivers the final cited answer.',
+        points: [
+          'Ingests all tool results grouped into Gemini functionResponse messages',
+          'Synthesizes final answer grounded strictly in verified page citations',
+          '100% of client, tool, and model traffic routes through central Node.js Gateway'
+        ],
+        moatText: 'The entire loop completes with Arize Phoenix OTel trace verification and verified passage grounding.'
+      }
+    ];
+
+    let s1Index = 0;
+    function runSlide1Loop() {
+      if (!isPlaying || currentSlide !== 1) return;
+
+      const step = s1Steps[s1Index];
+
+      // Reset all SVG node highlights
+      ['node-flutter', 'node-proxy', 'node-classifier', 'node-vertex', 'node-llm'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute('class', 'svg-node');
+      });
+
+      // Highlight active nodes for this step
+      if (step.activeNodeIds) {
+        step.activeNodeIds.forEach(id => {
+          const el = document.getElementById(id);
+          const cls = step.colorClasses && step.colorClasses[id] ? step.colorClasses[id] : 'active-node-proxy';
+          if (el) el.setAttribute('class', `svg-node ${cls}`);
+        });
+      }
+
+      // Highlight active connecting paths
+      ['link-flutter-proxy', 'link-proxy-classifier', 'link-proxy-vertex'].forEach(id => {
+        const pathEl = document.getElementById(id);
+        if (pathEl) {
+          const isActive = step.activeLinks && step.activeLinks.includes(id);
+          pathEl.classList.toggle('active-path', isActive);
+        }
+      });
+
+      // Update live status bar (visible description of system activity, without any step badge)
+      const statusTextEl = document.getElementById('s1-status-text');
+      const transportEl = document.getElementById('s1-transport');
+      if (statusTextEl) statusTextEl.textContent = step.text;
+      if (transportEl) transportEl.textContent = step.transport;
+
+      // Update right side details panel
+      const titleEl = document.getElementById('s1-detail-title');
+      const pillEl = document.getElementById('s1-detail-pill');
+      const descEl = document.getElementById('s1-detail-desc');
+      const pointsEl = document.getElementById('s1-detail-points');
+      const moatEl = document.getElementById('s1-moat-text');
+
+      if (titleEl) titleEl.textContent = step.detailTitle;
+      if (pillEl) pillEl.textContent = step.detailPill;
+      if (descEl) descEl.textContent = step.detailDesc;
+      if (moatEl) moatEl.textContent = step.moatText;
+
+      if (pointsEl) {
+        pointsEl.innerHTML = step.points.map(pt => `
+          <div class="tier-point-item">
+            <div class="tier-point-bullet"></div>
+            <span>${pt}</span>
+          </div>
+        `).join('');
+      }
+
+      s1Index = (s1Index + 1) % s1Steps.length;
+    }
+
+    // ========================================================
+    // SLIDE 2: TYPEWRITER & AUTONOMOUS LOOP FLOWCHART
+    // ========================================================
+    const fullUserQueryText = 'I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline when users put in queries and what are things to be careful about? Just give me an overview of the most critical thing the author mentions in this book.';
+    let typewriterTimer = null;
+
+    function startSlide2Typewriter() {
+      if (typewriterTimer) clearInterval(typewriterTimer);
+      const target = document.getElementById('s2-query-stream');
+      if (!target) return;
+      target.textContent = '';
+      let charIdx = 0;
+      typewriterTimer = setInterval(() => {
+        if (charIdx < fullUserQueryText.length) {
+          target.textContent += fullUserQueryText[charIdx];
+          charIdx++;
+        } else {
+          clearInterval(typewriterTimer);
+        }
+      }, 18);
+    }
+
+    function switchSlide2Tab(tab) {
+      const flowchartTab = document.getElementById('s2-tab-flowchart');
+      const studioTab = document.getElementById('s2-tab-studio');
+      const flowView = document.getElementById('s2-view-flowchart');
+      const studioView = document.getElementById('s2-view-studio');
+
+      if (tab === 'flowchart') {
+        if (flowchartTab) flowchartTab.classList.add('active');
+        if (studioTab) studioTab.classList.remove('active');
+        if (flowView) flowView.style.display = 'flex';
+        if (studioView) studioView.style.display = 'none';
+      } else {
+        if (flowchartTab) flowchartTab.classList.remove('active');
+        if (studioTab) studioTab.classList.add('active');
+        if (flowView) flowView.style.display = 'none';
+        if (studioView) studioView.style.display = 'flex';
+      }
+    }
+
+    const s2Steps = [
+      {
+        // STEP 0: PASS 1 - INITIAL INGRESS & TARGETED SEARCH
+        activePhase: 1,
+        flowActiveNodes: ['s2-node-query', 's2-node-reasoning'],
+        flowActiveLinks: ['s2-link-query-reason'],
+        loopActive: false,
+        loopText: 'Pass 1: Inspecting Section 2.3 (Page 52)',
+        badge: 'Pass 1 · Reasoning Ingress',
+        text: 'User query enters · Gemini 1.5 Flash probes Section 2.3 on Page 52 to identify compute constraints',
+        hubBadge: 'Pass 1 of 2',
+        hubTitle: 'Gemini 1.5 Flash inspects Section 2.3 (P. 52) · Missing operational limits ➔ Re-queries index',
+        gatePillText: 'Targeted Retrieval',
+        latency: '340ms (p50)',
+        docPage: 'Page 52 of 384',
+        docTool: 'Tool Active: getPageContent([52]) ➔ Discovered Section 2.3 Resource Constraints',
+        docHtml: `
+          <div class="doc-heading">Chapter 2: Principles of Machine Learning Systems Design</div>
+          <p class="doc-paragraph">
+            Machine learning systems operate under strict physical and architectural boundaries. While model capacity scales with parameter count, operational feasibility is dictated by compute, memory, and network throughput.
+          </p>
+          <div class="doc-highlight-box" style="border-left-color: var(--brand-navy); background: var(--brand-navy-bg); color: var(--brand-navy);">
+            <strong>Section 2.3: Resource Constraints &amp; Compute Regimes (Page 52)</strong><br/>
+            <em>"During early development, systems are compute-bound by raw training FLOPs. Over a sustained 6-month lifecycle, production shifts from training compute to inference latency bounds and memory bottlenecks."</em>
+          </div>
+        `,
+        chatHtml: `
+          <div class="chat-bubble-user">
+            I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline... what are things to be careful about?
+          </div>
+          <div class="chat-bubble-model" style="border-left: 3px solid var(--brand-navy);">
+            <div style="font-weight: 700; color: var(--brand-navy); font-size: 13px; margin-bottom: 4px;">Pass 1: Reasoning Ingress</div>
+            <span style="color: #475569;">
+              Classified intent as <strong>response</strong> (99.7% confidence). Retrieved Section 2.3 on Page 52. Found training compute constraints, but inspecting Section 7.2 on Page 229 for 6-month inference memory bounds...
+            </span>
+          </div>
+        `,
+        citationChips: `
+          <span class="citation-chip-item" style="border-color: #93c5fd; color: #1e3a8a; font-weight: 700;">
+            <strong>[P. 52]</strong> Section 2.3: Compute Regimes
+          </span>
+          <span class="citation-chip-item" style="opacity: 0.5;">
+            [P. 229] Awaiting Index Search...
+          </span>
+        `
+      },
+      {
+        // STEP 1: PASS 1 - PARTIAL CONTEXT ➔ RE-QUERYING
+        activePhase: 2,
+        flowActiveNodes: ['s2-node-searching', 's2-node-referencing'],
+        flowActiveLinks: ['s2-link-reason-search', 's2-link-search-ref'],
+        loopActive: true,
+        loopText: 'Pass 1: Partial Context ➔ Re-querying Local Index',
+        badge: 'Pass 1 · Incomplete Passage Feedback',
+        text: 'Section 2.3 retrieved · Missing 6-month operational latency curve ➔ Looping back to search index',
+        hubBadge: 'Pass 1 ➔ Re-querying',
+        hubTitle: 'Section 2.3 Found · Missing operational inference limits ➔ Re-querying local index',
+        gatePillText: 'Re-querying Index',
+        latency: '390ms (p50)',
+        docPage: 'Page 52 of 384',
+        docTool: 'Tool Active: searchPdfContent("inference latency scaling") ➔ Scanning Index',
+        docHtml: `
+          <div class="doc-heading">Chapter 2: Principles of Machine Learning Systems Design</div>
+          <div class="doc-highlight-box" style="border-left-color: var(--brand-navy); background: var(--brand-navy-bg); color: var(--brand-navy);">
+            <strong>Section 2.3: Resource Constraints &amp; Compute Regimes (Page 52)</strong><br/>
+            <em>"Production shifts from training compute to inference latency bounds and memory bottlenecks."</em>
+          </div>
+        `,
+        chatHtml: `
+          <div class="chat-bubble-user">
+            I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline... what are things to be careful about?
+          </div>
+          <div class="chat-bubble-model" style="border-left: 3px solid var(--brand-navy);">
+            <div style="font-weight: 700; color: var(--brand-navy); font-size: 13px; margin-bottom: 4px;">Pass 1: Deepening Context</div>
+            <span style="color: #475569;">
+              Located Section 2.3 foundation. Triggering search for memory bounds and Figure 2.4 latency curves on Pages 58 &amp; 229...
+            </span>
+          </div>
+        `,
+        citationChips: `
+          <span class="citation-chip-item" style="border-color: #93c5fd; color: #1e3a8a; font-weight: 700;">
+            <strong>[P. 52]</strong> Section 2.3 Verified
+          </span>
+          <span class="citation-chip-item" style="border-color: #93c5fd; color: #1e3a8a; font-weight: 700;">
+            <strong>[P. 58]</strong> Figure 2.4 Matched
+          </span>
+        `
+      },
+      {
+        // STEP 2: PASS 2 - TARGETED LOCAL SEARCH
+        activePhase: 2,
+        flowActiveNodes: ['s2-node-reasoning', 's2-node-searching'],
+        flowActiveLinks: ['s2-link-reason-search'],
+        loopActive: false,
+        loopText: 'Pass 2: Scanning Local Full-Text Index',
+        badge: 'Pass 2 · Targeted Index Search',
+        text: 'On-device search · Matches Section 7.2 on Page 229 with memory and KV-cache bounds',
+        hubBadge: 'Pass 2 of 2',
+        hubTitle: 'pdfrx index retrieved Section 7.2 on P. 229 (KV-cache & memory bandwidth)',
+        gatePillText: 'Local Search Matched',
+        latency: '410ms (p50)',
+        docPage: 'Page 229 of 384',
+        docTool: 'Tool Active: searchPdfContent("memory bandwidth KV-cache") ➔ 2 Matches',
+        docHtml: `
+          <div class="doc-heading">Chapter 7: Model Serving, Latency &amp; Memory</div>
+          <div class="doc-highlight-box" style="border-left-color: var(--brand-navy); background: var(--brand-navy-bg); color: var(--brand-navy);">
+            <strong>Section 7.2: Memory Interconnects &amp; KV-Cache Saturation (Page 229)</strong><br/>
+            <em>"As user query volume grows over a 6-month window, inference compute is rarely FLOP-bound. Instead, serving performance is bounded by KV-cache memory capacity and memory bandwidth saturation during token generation."</em>
+          </div>
+        `,
+        chatHtml: `
+          <div class="chat-bubble-user">
+            I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline... what are things to be careful about?
+          </div>
+          <div class="chat-bubble-model" style="border-left: 3px solid var(--brand-navy);">
+            <div style="font-weight: 700; color: var(--brand-navy); font-size: 13px; margin-bottom: 4px;">Pass 2: Index Correlated</div>
+            <span style="color: #475569;">
+              Retrieved Section 7.2 from Page 229. Correlating Chapter 2 initial compute scaling with Chapter 7 operational KV-cache constraints...
+            </span>
+          </div>
+        `,
+        citationChips: `
+          <span class="citation-chip-item" style="border-color: #93c5fd; color: #1e3a8a; font-weight: 700;">
+            <strong>[P. 52]</strong> Sec 2.3 Compute
+          </span>
+          <span class="citation-chip-item" style="border-color: #93c5fd; color: #1e3a8a; font-weight: 700;">
+            <strong>[P. 229]</strong> Sec 7.2 Memory
+          </span>
+        `
+      },
+      {
+        // STEP 3: PASS 2 - EVIDENCE VERIFICATION
+        activePhase: 3,
+        flowActiveNodes: ['s2-node-referencing'],
+        flowActiveLinks: ['s2-link-search-ref'],
+        loopActive: false,
+        loopText: 'Pass 2: Verified Against Source Passages',
+        badge: 'Pass 2 · Verification Complete',
+        text: 'Extracts Figure 2.4 & Section 7.2 formulas · All citations verified against source text',
+        hubBadge: 'Pass 2 · Verified',
+        hubTitle: 'Evidence Correlated on Device · Claims checked against P. 52, P. 58 & P. 229',
+        gatePillText: 'Citations Verified',
+        latency: '520ms (p50)',
+        docPage: 'Page 58 of 384',
+        docTool: 'Tool Active: getPageContent([58]) ➔ Figure 2.4 Extracted',
+        docHtml: `
+          <div class="doc-heading">2.3 Scaling Regimes in Production Systems</div>
+          <div class="doc-diagram-box">
+            <div class="doc-diagram-title">Figure 2.4: Production Compute vs Memory Shift</div>
+            <svg viewBox="0 0 400 65" style="width: 100%; height: 65px; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <rect x="20" y="15" width="105" height="35" rx="6" fill="#eff6ff" stroke="#1e3a8a" stroke-width="1.5"/>
+              <text x="72.5" y="32" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e3a8a">Phase 1</text>
+              <text x="72.5" y="44" text-anchor="middle" font-size="9" fill="#1e3a8a">Compute-Bound</text>
+              <line x1="125" y1="32" x2="145" y2="32" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#s2-arr-gray)"/>
+              <rect x="145" y="15" width="105" height="35" rx="6" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+              <text x="197.5" y="32" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">Phase 2</text>
+              <text x="197.5" y="44" text-anchor="middle" font-size="9" fill="#334155">KV-Cache Memory</text>
+              <line x1="250" y1="32" x2="270" y2="32" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#s2-arr-gray)"/>
+              <rect x="270" y="15" width="110" height="35" rx="6" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+              <text x="325" y="32" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">Phase 3</text>
+              <text x="325" y="44" text-anchor="middle" font-size="9" fill="#334155">Interconnect Saturation</text>
+            </svg>
+          </div>
+        `,
+        chatHtml: `
+          <div class="chat-bubble-user">
+            I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline... what are things to be careful about?
+          </div>
+          <div class="chat-bubble-model" style="border-left: 3px solid var(--brand-teal);">
+            <div style="font-weight: 700; color: var(--brand-teal); font-size: 13px; margin-bottom: 4px;">Evidence Verified · Synthesizing Grounded Answer</div>
+            <p style="margin: 0 0 6px 0; font-size: 13.5px; line-height: 1.5;">
+              In <em>Designing Machine Learning Systems</em> <span class="citation-tag active">[P. 52]</span>, the author emphasizes that compute requirements change fundamentally over a system's lifecycle.
+            </p>
+            <p style="margin: 0 0 6px 0; font-size: 13.5px; line-height: 1.5;">
+              Over a <strong>6-month production timeline</strong> <span class="citation-tag active">[P. 58, Fig 2.4]</span>, systems transition from being <strong>training compute-bound</strong> to <strong>KV-cache memory bandwidth bound</strong> <span class="citation-tag active">[P. 229]</span> as query concurrency increases.
+            </p>
+          </div>
+        `,
+        citationChips: `
+          <span class="citation-chip-item" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;">
+            <strong>[P. 52]</strong> Compute Regimes
+          </span>
+          <span class="citation-chip-item" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;">
+            <strong>[P. 58]</strong> Figure 2.4 Latency
+          </span>
+          <span class="citation-chip-item" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;">
+            <strong>[P. 229]</strong> Memory Interconnects
+          </span>
+        `
+      },
+      {
+        // STEP 4: FINAL RESPONSE DELIVERED
+        activePhase: 3,
+        flowActiveNodes: ['s2-node-response'],
+        flowActiveLinks: ['s2-link-ref-response'],
+        loopActive: false,
+        loopText: 'Pass 2 Complete · Verified Response Delivered',
+        badge: 'Execution Complete · Response Delivered',
+        text: 'Verified response returned to user · Grounded strictly with [P. 52], [P. 58], [P. 229] citations',
+        hubBadge: 'Response Delivered',
+        hubTitle: 'Grounded Briefing Delivered to Mobile UI · Citations [P. 52], [P. 58], [P. 229]',
+        gatePillText: 'Citations Verified',
+        latency: '280ms (p50)',
+        docPage: 'Page 58 of 384',
+        docTool: 'All Passages Grounded · Source Verification Complete',
+        docHtml: `
+          <div class="doc-heading">2.3 Scaling Regimes in Production Systems</div>
+          <div class="doc-highlight-box" style="border-left-color: var(--brand-teal); background: var(--brand-teal-bg); color: var(--brand-teal);">
+            <strong>Source Grounding Complete:</strong><br/>
+            All retrieved claims verified against source passages. Citations [P. 52], [P. 58], and [P. 229] cross-correlated with zero full-book bulk upload.
+          </div>
+        `,
+        chatHtml: `
+          <div class="chat-bubble-user">
+            I want to understand scaling laws when it comes to AI compute. How does that work over a 6-month timeline... what are things to be careful about?
+          </div>
+          <div class="chat-bubble-model" style="border-left: 3px solid var(--brand-teal);">
+            <div style="font-weight: 700; color: var(--brand-teal); font-size: 13px; margin-bottom: 4px;">Grounded Synthesis Delivered</div>
+            <p style="margin: 0 0 6px 0; font-size: 13.5px; line-height: 1.5;">
+              In <em>Designing Machine Learning Systems</em> <span class="citation-tag active">[P. 52]</span>, the author emphasizes that compute requirements change fundamentally over a system's lifecycle.
+            </p>
+            <p style="margin: 0 0 6px 0; font-size: 13.5px; line-height: 1.5;">
+              Over a <strong>6-month production timeline</strong> <span class="citation-tag active">[P. 58, Fig 2.4]</span>, systems transition from being <strong>training compute-bound</strong> to <strong>KV-cache memory bandwidth bound</strong> <span class="citation-tag active">[P. 229]</span> as query concurrency increases.
+            </p>
+          </div>
+        `,
+        citationChips: `
+          <span class="citation-chip-item" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;">
+            <strong>[P. 52]</strong> Compute Regimes
+          </span>
+          <span class="citation-chip-item" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;">
+            <strong>[P. 58]</strong> Figure 2.4 Latency
+          </span>
+          <span class="citation-chip-item" style="border-color: #0f766e; color: #0f766e; font-weight: 700; background: #f0fdfa;">
+            <strong>[P. 229]</strong> Memory Interconnects
+          </span>
+        `
+      }
+    ];
+
+    let s2Index = 0;
+    function runSlide2Loop() {
+      if (!isPlaying || currentSlide !== 2) return;
+
+      const step = s2Steps[s2Index];
+
+      // Update Phase Cards & Active Phase Badges (For Studio View)
+      [1, 2, 3].forEach(pNum => {
+        const card = document.getElementById(`phase-card-${pNum}`);
+        const badge = document.getElementById(`phase-badge-${pNum}`);
+        const isActive = pNum === step.activePhase;
+        if (card) {
+          card.classList.toggle('active-phase', isActive);
+        }
+        if (badge) {
+          if (isActive) {
+            badge.style.background = '#0071e3';
+            badge.style.color = '#ffffff';
+            badge.textContent = pNum === 1 ? '● Active Reasoning' : pNum === 2 ? '● Scanning Index' : '● Synthesized';
+          } else {
+            badge.style.background = 'rgba(0, 0, 0, 0.05)';
+            badge.style.color = 'var(--text-secondary)';
+            badge.textContent = pNum === 1 ? 'Targeted Cold Start' : pNum === 2 ? 'Local Index Scan' : 'Grounded Synthesis';
+          }
+        }
+      });
+
+      // Update SVG Flowchart View Nodes & Links (Only 5 Nodes)
+      const s2NodeIds = ['s2-node-query', 's2-node-reasoning', 's2-node-searching', 's2-node-referencing', 's2-node-response'];
+      s2NodeIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute('class', 's2-node');
+      });
+
+      const s2LinkIds = ['s2-link-query-reason', 's2-link-reason-search', 's2-link-search-ref', 's2-link-ref-response'];
+      s2LinkIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.setAttribute('class', 's2-link');
+          el.setAttribute('marker-end', 'url(#s2-arr-gray)');
+        }
+      });
+
+      const loopLink = document.getElementById('s2-link-loopback');
+      const loopPill = document.getElementById('s2-loop-pill-group');
+      if (loopLink) {
+        loopLink.setAttribute('class', 's2-link');
+        loopLink.setAttribute('marker-end', 'url(#s2-arr-gray)');
+      }
+      if (loopPill) loopPill.setAttribute('class', '');
+
+      // Apply Active Nodes
+      if (step.flowActiveNodes) {
+        step.flowActiveNodes.forEach(id => {
+          const el = document.getElementById(id);
+          const isComplete = id === 's2-node-response';
+          if (el) el.setAttribute('class', isComplete ? 's2-node s2-node-complete' : 's2-node s2-node-active');
+        });
+      }
+
+      // Apply Active Links
+      if (step.flowActiveLinks) {
+        step.flowActiveLinks.forEach(id => {
+          const el = document.getElementById(id);
+          const isComplete = id === 's2-link-ref-response';
+          if (el) {
+            el.setAttribute('class', isComplete ? 's2-link s2-link-complete' : 's2-link s2-link-active');
+            el.setAttribute('marker-end', isComplete ? 'url(#s2-arr-green)' : 'url(#s2-arr-blue)');
+          }
+        });
+      }
+
+      // Apply Loopback Animation and Pill Text
+      if (loopPill) {
+        const pillText = loopPill.querySelector('text');
+        if (pillText && step.loopText) pillText.textContent = step.loopText;
+        if (step.loopActive) {
+          loopPill.setAttribute('class', 's2-loop-pill-active');
+        } else {
+          loopPill.setAttribute('class', '');
+        }
+      }
+      if (step.loopActive && loopLink) {
+        loopLink.setAttribute('class', 's2-link s2-loop-active');
+        loopLink.setAttribute('marker-end', 'url(#s2-arr-blue)');
+      }
+
+      // Update Sleek Trajectory Bar (Clean 1-line update)
+      const hubBadgeEl = document.getElementById('s2-hub-badge');
+      const hubTitleEl = document.getElementById('s2-hub-title');
+      const gatePillEl = document.getElementById('s2-hub-gate-pill');
+      const latencyEl = document.getElementById('s2-hub-latency');
+
+      if (hubBadgeEl) hubBadgeEl.textContent = step.hubBadge;
+      if (hubTitleEl) hubTitleEl.textContent = step.hubTitle;
+      if (gatePillEl) gatePillEl.textContent = step.gatePillText;
+      if (latencyEl) latencyEl.textContent = step.latency;
+
+      // Update Document Context Panel (Studio View)
+      const docPageEl = document.getElementById('s2-doc-page-pill');
+      const docBodyEl = document.getElementById('s2-doc-body');
+      const docStatusEl = document.getElementById('s2-doc-status-text');
+      if (docPageEl) docPageEl.textContent = step.docPage;
+      if (docBodyEl) docBodyEl.innerHTML = step.docHtml;
+      if (docStatusEl) docStatusEl.textContent = step.docTool;
+
+      // Update Grounded Chat Panel (Studio View)
+      const chatBodyEl = document.getElementById('s2-chat-body');
+      const chipsEl = document.getElementById('s2-citation-chips');
+      if (chatBodyEl) chatBodyEl.innerHTML = step.chatHtml;
+      if (chipsEl) chipsEl.innerHTML = step.citationChips;
+
+      // Update Bottom Caption Bar
+      const stepBadgeEl = document.getElementById('s2-step-badge');
+      const stepTextEl = document.getElementById('s2-step-text');
+      if (stepBadgeEl) stepBadgeEl.textContent = step.badge;
+      if (stepTextEl) stepTextEl.textContent = step.text;
+
+      s2Index = (s2Index + 1) % s2Steps.length;
+    }
+
+    // SLIDE 3: PRESENTATION MODE (STREAMING VOICE AUDIO @ 35MS/CHAR)
+    // ========================================================
+    const s3Turns = [
+      {
+        turnNum: 1,
+        page: 17,
+        nextPage: 18,
+        toolCode: 'navigateToPage({"pageNumber": 17}) + synthesizeSpeech(...) + getPageContent([18])',
+        quote: "To build lasting habits, shift your self-identity first—it's far easier to stick to a behavior when you believe it's who you are."
+      },
+      {
+        turnNum: 2,
+        page: 18,
+        nextPage: 19,
+        toolCode: 'navigateToPage({"pageNumber": 18}) + synthesizeSpeech(...) + getPageContent([19])',
+        quote: "True behavior change is identity change. You might start a habit through motivation, but you stick to it because it becomes part of who you are."
+      },
+      {
+        turnNum: 3,
+        page: 19,
+        nextPage: 20,
+        toolCode: 'navigateToPage({"pageNumber": 19}) + synthesizeSpeech(...) + getPageContent([20])',
+        quote: "Outcomes are about what you get. Processes are about what you do. Identity is about what you believe."
+      },
+      {
+        turnNum: 4,
+        page: 20,
+        nextPage: 21,
+        toolCode: 'navigateToPage({"pageNumber": 20}) + synthesizeSpeech(...) + getPageContent([21])',
+        quote: "Every action you take is a vote for the type of person you wish to become. No single instance will transform your beliefs, but the votes build up."
+      },
+      {
+        turnNum: 5,
+        page: 21,
+        nextPage: 22,
+        toolCode: 'navigateToPage({"pageNumber": 21}) + synthesizeSpeech(...) + getPageContent([22])',
+        quote: "The two-step recipe for change: First, decide the type of person you want to be. Second, prove it to yourself with small wins."
+      },
+      {
+        turnNum: 6,
+        page: 22,
+        nextPage: 23,
+        toolCode: 'navigateToPage({"pageNumber": 22}) + synthesizeSpeech(...) + getPageContent([23])',
+        quote: "Start with wins so small they cannot fail—like doing two push-ups or reading one page. Momentum matters more than intensity."
+      },
+      {
+        turnNum: 7,
+        page: 23,
+        nextPage: null,
+        toolCode: 'navigateToPage({"pageNumber": 23}) + synthesizeSpeech({"speech": "...", "final": true})',
+        quote: "Habits are the compound interest of self-improvement. Proving your identity to yourself is the ultimate goal."
+      }
+    ];
+
+    let s3SpeechTypewriterTimer = null;
+    function streamSpeechTypewriter(text) {
+      if (s3SpeechTypewriterTimer) clearInterval(s3SpeechTypewriterTimer);
+      const target = document.getElementById('s3-speech-content');
+      if (!target) return;
+      target.textContent = text;
+    }
+
+    function initSlide3() {
+      const turn1 = s3Turns[0];
+      const pageEl = document.getElementById('s3-speech-page');
+      const contentEl = document.getElementById('s3-speech-content');
+      if (pageEl) pageEl.textContent = `Page ${turn1.page}:`;
+      if (contentEl) contentEl.textContent = `"${turn1.quote}"`;
+
+      const navBadge = document.getElementById('s3-hub-nav-badge');
+      const fetchBadge = document.getElementById('s3-hub-fetch-badge');
+      const hubTitle = document.getElementById('s3-hub-title');
+      const hubCode = document.getElementById('s3-hub-code');
+      const statusPill = document.getElementById('s3-status-pill');
+
+      if (navBadge) navBadge.textContent = `Nav(${turn1.page})`;
+      if (fetchBadge) fetchBadge.textContent = `Pre-fetch(${turn1.nextPage})`;
+      if (hubTitle) hubTitle.textContent = `Turn 1 Executing on Device & Audio Stream`;
+      if (hubCode) hubCode.textContent = turn1.toolCode;
+      if (statusPill) statusPill.textContent = `Turn 1 · Page 17`;
+
+      // Update Track Nodes Initial State
+      document.querySelectorAll('#s3-track-ui .node-item').forEach(node => {
+        const p = parseInt(node.getAttribute('data-page'));
+        node.classList.toggle('node-active-blue', p === 17);
+      });
+      document.querySelectorAll('#s3-track-voice .node-item').forEach(node => {
+        const p = parseInt(node.getAttribute('data-page'));
+        node.classList.toggle('node-active-green', p === 17);
+      });
+      document.querySelectorAll('#s3-track-prefetch .node-item').forEach(node => {
+        const p = parseInt(node.getAttribute('data-page'));
+        node.classList.toggle('node-prefetch-orange', p === 18);
+      });
+    }
+
+    let s3Index = 0;
+    function runSlide3Loop() {
+      if (!isPlaying || currentSlide !== 3) return;
+
+      const turn = s3Turns[s3Index];
+
+      // Update Active Tool Execution Hub
+      document.getElementById('s3-hub-nav-badge').textContent = `Nav(${turn.page})`;
+      document.getElementById('s3-hub-fetch-badge').textContent = turn.nextPage ? `Pre-fetch(${turn.nextPage})` : 'Walkthrough Final';
+      document.getElementById('s3-hub-title').textContent = `Turn ${turn.turnNum} Executing on Device & Audio Stream`;
+      document.getElementById('s3-hub-code').textContent = turn.toolCode;
+
+      // Update Track 1: UI Flip Nodes (Apple Blue)
+      document.querySelectorAll('#s3-track-ui .node-item').forEach(node => {
+        const p = parseInt(node.getAttribute('data-page'));
+        node.classList.toggle('node-active-blue', p === turn.page);
+      });
+
+      // Update Track 2: Voice Audio Nodes (Apple Green)
+      document.querySelectorAll('#s3-track-voice .node-item').forEach(node => {
+        const p = parseInt(node.getAttribute('data-page'));
+        node.classList.toggle('node-active-green', p === turn.page);
+      });
+
+      // Update Track 3: Background Pre-fetch Nodes (Apple Orange)
+      document.querySelectorAll('#s3-track-prefetch .node-item').forEach(node => {
+        const p = parseInt(node.getAttribute('data-page'));
+        if (turn.nextPage && p === turn.nextPage) {
+          node.classList.add('node-prefetch-orange');
+          node.classList.remove('node-active-green');
+        } else {
+          node.classList.remove('node-prefetch-orange');
+        }
+        if (!turn.nextPage && p === 23) {
+          node.classList.add('node-active-green');
+        }
+      });
+
+      // Update Speech Box directly (instant spoken text, no typewriter delay)
+      document.getElementById('s3-speech-page').textContent = `Page ${turn.page}:`;
+      const speechContentEl = document.getElementById('s3-speech-content');
+      if (speechContentEl) speechContentEl.textContent = `"${turn.quote}"`;
+
+      // Update Caption
+      document.getElementById('s3-status-pill').textContent = `Turn ${turn.turnNum} · Page ${turn.page}`;
+      document.getElementById('s3-cap-cur').textContent = turn.page;
+      document.getElementById('s3-cap-next').textContent = turn.nextPage ? turn.nextPage : 'None (Done)';
+
+      // Auto-scroll active node into view on mobile
+      const activeNodeEl = document.querySelector('#s3-track-ui .node-active-blue');
+      if (activeNodeEl && window.innerWidth <= 900) {
+        activeNodeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+
+      s3Index = (s3Index + 1) % s3Turns.length;
+    }
+
+    // Default Rich Specs for Standalone file:// and Web Server Previews
+    const DEFAULT_MMD = `sequenceDiagram
+    autonumber
+    actor User as Reader / User
+    participant Flutter as Flutter Edge Client<br/>(pdfrx Engine & SQLite)
+    participant Gateway as Node.js Gateway<br/>(Express 5 / TLS WebSocket)
+    participant Classifier as ML Intent Classifier<br/>(FastAPI PyTorch :8000)
+    participant Gemini as Gemini 1.5 Flash<br/>(Google Vertex AI)
+    participant FlutterTTS as Flutter TTS Engine<br/>(flutter_tts on-device)
+
+    Note over Flutter: Local Document Storage: Full PDF stays on phone; only model-requested passages are sent
+    Flutter->>Gateway: wss://gateway.talktojiva.com/ws (TLS WebSocket session init)
+    activate Gateway
+    Gateway->>Gateway: Start Arize Phoenix OTel root span ("Gemini - Request")
+    Gateway-->>Flutter: Connection Ack (30s heartbeat interval)
+    deactivate Gateway
+
+    User->>Flutter: Asks query: "I want to understand scaling laws..."
+    Flutter->>Gateway: WS send { userquery, sessionId, depth: "Explorative" }
+    activate Gateway
+    Gateway->>Classifier: POST /predict { "text": userquery }
+    activate Classifier
+    Classifier->>Classifier: PyTorch sequence inference (illustrative session p50 <15ms)
+    Classifier-->>Gateway: { "intent": "response", "confidence": 0.9969 }
+    deactivate Classifier
+    Gateway->>Gateway: Inject intent & attention budget rules into system prompt
+    deactivate Gateway
+
+    Gateway->>Gemini: Vertex AI generateContent [Prompt + Tools + Intent]
+    activate Gemini
+    Note over Gemini: Turn 0: Cold start reasoning.<br/>Probes Section 2.3 on Page 52 of 384-page volume.
+    Gemini-->>Gateway: Tool call: getPageContent({"pageNumbers": [52]})
+    deactivate Gemini
+
+    Gateway->>Flutter: Execute tool locally on device
+    activate Flutter
+    Flutter->>Flutter: pdfrx extracts text on Page 52 (Resource Constraints & Compute Regimes)
+    Flutter-->>Gateway: Tool response: { content: "Section 2.3 text..." }
+    deactivate Flutter
+
+    Gateway->>Gemini: Feed Section 2.3 text into context
+    activate Gemini
+    Note over Gemini: Turn 1: Local index scan for "memory bandwidth KV-cache"
+    Gemini-->>Gateway: Tool call: searchPdfContent({"query": "memory bandwidth KV-cache"})
+    deactivate Gemini
+
+    Gateway->>Flutter: Execute local index search
+    activate Flutter
+    Flutter-->>Gateway: Returns hits: [Page 52, Page 229 (Distributed ML Serving)]
+    deactivate Flutter
+
+    Gateway->>Gemini: Feed hits; requests Figure 2.4 & Section 7.2 formulas
+    activate Gemini
+    Gemini-->>Gateway: Tool call: getPageContent({"pageNumbers": [58, 229]})
+    deactivate Gemini
+
+    Gateway->>Flutter: Extract Section 2.3 diagram & Section 7.2 memory formulas
+    activate Flutter
+    Flutter-->>Gateway: Returns Figure 2.4 & Section 7.2 KV-cache saturation bounds
+    deactivate Flutter
+
+    Gateway->>Gemini: Feed precision page data
+    activate Gemini
+    Note over Gemini: Grounded synthesis.<br/>Synthesizes briefing citing Section 2.3, Fig 2.4, and Section 7.2.
+    Gemini-->>Gateway: Synthesized response with verifiable page citations
+    deactivate Gemini
+
+    Gateway-->>Flutter: Stream markdown response over WebSocket
+    Flutter-->>User: Displays structured answer with clickable page citations [P. 52], [P. 58], [P. 229]`;
+    const DEFAULT_PUML = `@startuml architecture_sequence
+!theme plain
+skinparam backgroundColor #fbfbfd
+skinparam defaultFontName "Inter", Arial, sans-serif
+skinparam defaultFontSize 12
+
+actor "Reader / User\n(Mobile Device)" as User
+participant "Flutter Edge Client\n(pdfrx Engine & SQLite)" as Flutter #eff6ff
+participant "Node.js Gateway\n(Express 5 / TLS WebSocket)" as Gateway #f8fafc
+participant "Intent Classifier\n(FastAPI PyTorch :8000)" as Classifier #f1f5f9
+participant "Gemini 1.5 Flash Core\n(Google Vertex AI)" as Gemini #f0fdfa
+participant "Flutter TTS Engine\n(flutter_tts on-device)" as FlutterTTS #f8fafc
+
+== 1. Session Connection & Distributed Tracing ==
+note over Flutter
+  **Local Document Storage**
+  • Full PDF remains in local mobile storage
+  • Only passages requested by model are transmitted
+end note
+
+Flutter -> Gateway : WebSocket Connect: wss://gateway.talktojiva.com/ws (TLS)
+activate Gateway
+Gateway -> Gateway : Start OpenTelemetry Root Span [@arizeai/phoenix-otel]
+Gateway --> Flutter : Connection Ack (Heartbeat: 30s)
+deactivate Gateway
+
+== 2. Query Ingestion & Sub-15ms Pre-Classification ==
+User -> Flutter : Asks Question: "I want to understand scaling laws..."
+Flutter -> Gateway : WS Message: { userquery, sessionId, depth: "Explorative" }
+activate Gateway
+Gateway -> Classifier : POST /predict { "text": userquery }
+activate Classifier
+Classifier -> Classifier : PyTorch Classification (illustrative session p50 <15ms)
+Classifier --> Gateway : Return { "intent": "response", "confidence": 0.9969 }
+deactivate Classifier
+Gateway -> Gateway : Inject Intent & Attention Budget into System Prompt
+
+== 3. Agent Tool Loop (Edge Execution) ==
+Gateway -> Gemini : Vertex AI GenerateContent [Prompt + Tools + Intent]
+activate Gemini
+Gemini --> Gateway : Function Call: getPageContent({"pageNumbers": [52]})
+deactivate Gemini
+Gateway --> Flutter : Execute Tool locally on device
+activate Flutter
+Flutter -> Flutter : pdfrx extracts Section 2.3 on Page 52 (Compute Regimes)
+Flutter --> Gateway : Tool Response: { content: "Section 2.3 text..." }
+deactivate Flutter
+
+Gateway -> Gemini : Feed Tool Response
+activate Gemini
+Gemini --> Gateway : Function Call: searchPdfContent({"query": "memory bandwidth KV-cache"})
+deactivate Gemini
+Gateway --> Flutter : Execute Local Index Search
+activate Flutter
+Flutter --> Gateway : Return Hits: [Page 52, Page 229 (Distributed ML)]
+deactivate Flutter
+
+Gateway -> Gemini : Feed Search Hits
+activate Gemini
+Gemini --> Gateway : Function Call: getPageContent({"pageNumbers": [58, 229]})
+deactivate Gemini
+Gateway --> Flutter : Extract Figure 2.4 & Section 7.2 formulas
+activate Flutter
+Flutter --> Gateway : Return Figure 2.4 & Section 7.2 bounds
+deactivate Flutter
+
+Gateway -> Gemini : Feed Precision Page Content
+activate Gemini
+Gemini --> Gateway : Synthesized Response grounded in [P. 52], [P. 58], [P. 229]
+deactivate Gemini
+Gateway --> Flutter : Stream Synthesized Response over WS
+Flutter --> User : Render Markdown with Clickable Page Citations
+
+== 4. Presentation Mode: Lookahead Pre-fetching ==
+User -> Flutter : Voice Command: "Can you present me this chapter"
+Flutter -> Gateway : WS Message: { userquery, mode: "voice" }
+activate Gateway
+
+loop Across Pages 17 to 23 (James Clear: Transform Your Habits)
+  Gateway -> Gemini : Generate Presentation Multi-Tool Batch
+  activate Gemini
+  Gemini --> Gateway : Batch: navigateToPage(N) + synthesizeSpeech(N) + getPageContent([N+1])
+  deactivate Gemini
+
+  par Action 1: Synchronous UI Flip
+    Gateway --> Flutter : navigateToPage(pageNumber: N)
+    Flutter -> Flutter : pdfrx flips screen to Page N
+    Flutter --> User : Display Page N on Reader
+  and Action 2: On-Device Spoken Narration (Flutter TTS)
+    Gateway --> Flutter : synthesizeSpeech(speechN)
+    activate Flutter
+    Flutter -> FlutterTTS : speak(speechN) via flutter_tts
+    activate FlutterTTS
+    FlutterTTS --> User : Spoken Voice Narration (On-Device)
+    deactivate FlutterTTS
+    deactivate Flutter
+  and Action 3: Asynchronous Lookahead Pre-fetch
+    Gateway --> Flutter : getPageContent([N+1])
+    activate Flutter
+    Flutter -> Flutter : pdfrx loads Page N+1 into RAM
+    Flutter --> Gateway : Return Page N+1 while User listens to Page N
+    deactivate Flutter
+  end
+  Gateway -> Gemini : Feed Pre-fetched Page N+1
+end
+@enduml`;
+    const DEFAULT_MOTION_JSON = `{
+  "$schema": "https://motionity.app/schemas/motionity-v1.json",
+  "project": {
+    "name": "Talktojiva Technical Presentation Motion Specifications",
+    "version": "2.0.0",
+    "canvas": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "backgroundColor": "#f2f4f7"
+    },
+    "typography": {
+      "fontFamily": "Inter, -apple-system, sans-serif"
+    },
+    "motionStandards": {
+      "loopCadenceMs": 1900,
+      "typewriterCharRateMs": 18,
+      "lookaheadTransition": "pre-fetched in memory before narration finishes"
+    },
+    "slides": [
+      {
+        "slide": 1,
+        "title": "Talktojiva Communication Architecture",
+        "steps": 6
+      },
+      {
+        "slide": 2,
+        "title": "How Chat Works - Reasoning, Searching & Referencing",
+        "steps": 5
+      },
+      {
+        "slide": 3,
+        "title": "Presentation Mode - Reading, Navigating & Speaking",
+        "turns": 7
+      }
+    ]
+  }
+}`;
+
+    document.getElementById('mermaidPreBlock').textContent = DEFAULT_MMD;
+    document.getElementById('plantumlPreBlock').textContent = DEFAULT_PUML;
+    document.getElementById('motionJsonPreBlock').textContent = DEFAULT_MOTION_JSON;
+
+    // Upgrade from external files if accessible
+    fetch('docs/architecture_sequence.mmd')
+      .then(res => res.text())
+      .then(text => { if (text) document.getElementById('mermaidPreBlock').textContent = text; })
+      .catch(() => {});
+
+    fetch('docs/architecture_sequence.puml')
+      .then(res => res.text())
+      .then(text => { if (text) document.getElementById('plantumlPreBlock').textContent = text; })
+      .catch(() => {});
+
+    fetch('assets/presentation_motion_keyframes.json')
+      .then(res => res.json())
+      .then(data => { if (data) document.getElementById('motionJsonPreBlock').textContent = JSON.stringify(data, null, 2); })
+      .catch(() => {});
+
+    
+    // =========================================================================
+    // MOBILE INTERACTIONS: SWIPE TO CHANGE SLIDES & SCROLL PAUSE
+    // =========================================================================
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let isSwipeIgnored = false;
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartTime = Date.now();
+
+      // Ignore swipes that originate inside horizontally scrollable containers
+      let target = e.target;
+      isSwipeIgnored = false;
+      while (target && target !== document.body) {
+        if (target.classList && (
+          target.classList.contains('tracks-scroll-container') ||
+          target.classList.contains('svg-scroll-container') ||
+          target.classList.contains('code-box-white')
+        )) {
+          isSwipeIgnored = true;
+          break;
+        }
+        const style = window.getComputedStyle(target);
+        if ((style.overflowX === 'auto' || style.overflowX === 'scroll') && target.scrollWidth > target.clientWidth) {
+          isSwipeIgnored = true;
+          break;
+        }
+        target = target.parentElement;
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (isSwipeIgnored || e.changedTouches.length !== 1) return;
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      const deltaTime = Date.now() - touchStartTime;
+
+      // Threshold: horizontal swipe >= 50px, horizontal dominant over vertical, duration < 600ms
+      if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && deltaTime < 600) {
+        if (deltaX < 0) {
+          nextSlide();
+        } else {
+          prevSlide();
+        }
+      }
+    }, { passive: true });
+
+    // Pause auto-loop while user is actively scrolling vertically
+    let isScrollPaused = false;
+    let scrollPauseTimer = null;
+
+    window.addEventListener('scroll', () => {
+      if (window.innerWidth > 900) return;
+
+      if (isPlaying && !isScrollPaused) {
+        isScrollPaused = true;
+        if (loopIntervalTimer) {
+          clearInterval(loopIntervalTimer);
+          loopIntervalTimer = null;
+        }
+        const label = document.getElementById('playPauseLabel');
+        if (label) label.textContent = 'Play';
+      }
+
+      clearTimeout(scrollPauseTimer);
+      scrollPauseTimer = setTimeout(() => {
+        if (isScrollPaused && isPlaying) {
+          isScrollPaused = false;
+          const label = document.getElementById('playPauseLabel');
+          if (label) label.textContent = 'Pause';
+          resetIntervalTimer();
+        }
+      }, 900);
+    }, { passive: true });
+
+    // Start Initial States
+    initSlide3();
+    resetIntervalTimer();
+    runSlide1Loop();
+    startSlide2Typewriter();
+  </script>
+</body>
+</html>
